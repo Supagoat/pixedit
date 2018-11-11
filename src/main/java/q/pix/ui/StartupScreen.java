@@ -87,7 +87,7 @@ public class StartupScreen extends JFrame {
 			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
 					File.separator + "input" + File.separator));
 			if (target.exists()) {
-				AppState.get().setInputImage(ImageIO.read(target));
+				AppState.get().setInputImage();
 			}
 			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
 					File.separator + "target" + File.separator));
@@ -98,6 +98,12 @@ public class StartupScreen extends JFrame {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	private Image scaleTo(File imageFile) {
+		BufferedImage image = ImageIO.read(imageFile);
+		double scaleFactor = image.getHeight() > image.getWidth() ? 
+		.getScaledInstance(newWidth, newHeight, Image.SCALE_DEFAULT)
 	}
 
 }
