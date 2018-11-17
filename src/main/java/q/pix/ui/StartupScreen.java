@@ -19,6 +19,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.imgscalr.Scalr;
 
 import q.pix.AppState;
+import q.pix.util.ImageUtil;
 
 public class StartupScreen extends JFrame {
 	/**
@@ -86,15 +87,15 @@ public class StartupScreen extends JFrame {
 
 	private void loadFiles(File selectedFile) {
 		try {
-			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
+			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
 					File.separator + "input" + File.separator));
-			if (target.exists()) {
-				AppState.get().setInputImage(scaleTo(target));
-			}
-			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
-					File.separator + "target" + File.separator));
 			if (input.exists()) {
-				AppState.get().setTargetImage(scaleTo(input));
+				AppState.get().setInputImage(ImageUtil.loadAndScale(input));
+			}
+			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
+					File.separator + "target" + File.separator));
+			if (target.exists()) {
+				AppState.get().setTargetImage(ImageUtil.loadAndScale(target));
 			}
 			new DispPanel().display();
 		} catch (Exception e) {
@@ -102,22 +103,5 @@ public class StartupScreen extends JFrame {
 		}
 	}
 	
-	private BufferedImage scaleTo(File imageFile) {
-		try {
-			BufferedImage image = ImageIO.read(imageFile);
-			Scalr.Mode scaleTo =  image.getHeight() > image.getWidth() ? Scalr.Mode.FIT_TO_HEIGHT : Scalr.Mode.FIT_TO_WIDTH;
-
-		
-			image = Scalr.resize(image,
-                    Scalr.Method.ULTRA_QUALITY,
-                    scaleTo,
-                    AppState.IMAGE_SIZE,
-                    AppState.IMAGE_SIZE);
-			
-			return image;
-		} catch(Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 }
