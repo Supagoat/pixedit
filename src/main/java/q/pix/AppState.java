@@ -5,7 +5,7 @@ import java.awt.image.BufferedImage;
 public class AppState {
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
-	
+	public static final int IMAGE_SIZE=256;
 	
 	public static AppState get() {
 		return Singleton.INSTANCE.get();

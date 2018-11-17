@@ -21,6 +21,8 @@ mainClassName = 'q.pix.PixEdit'
 dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     compile 'com.google.guava:guava:23.0'
+	// https://mvnrepository.com/artifact/org.imgscalr/imgscalr-lib
+	compile group: 'org.imgscalr', name: 'imgscalr-lib', version: '4.2'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'

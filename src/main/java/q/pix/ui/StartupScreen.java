@@ -1,13 +1,13 @@
 package q.pix.ui;
 
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.imageio.ImageIO;
-import javax.imageio.stream.FileImageInputStream;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -15,6 +15,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.imgscalr.Scalr;
 
 import q.pix.AppState;
 
@@ -87,12 +89,12 @@ public class StartupScreen extends JFrame {
 			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
 					File.separator + "input" + File.separator));
 			if (target.exists()) {
-				AppState.get().setInputImage();
+				AppState.get().setInputImage(scaleTo(target));
 			}
 			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
 					File.separator + "target" + File.separator));
 			if (input.exists()) {
-				AppState.get().setTargetImage(ImageIO.read(input));
+				AppState.get().setTargetImage(scaleTo(input));
 			}
 			new DispPanel().display();
 		} catch (Exception e) {
@@ -100,10 +102,22 @@ public class StartupScreen extends JFrame {
 		}
 	}
 	
-	private Image scaleTo(File imageFile) {
-		BufferedImage image = ImageIO.read(imageFile);
-		double scaleFactor = image.getHeight() > image.getWidth() ? 
-		.getScaledInstance(newWidth, newHeight, Image.SCALE_DEFAULT)
+	private BufferedImage scaleTo(File imageFile) {
+		try {
+			BufferedImage image = ImageIO.read(imageFile);
+			Scalr.Mode scaleTo =  image.getHeight() > image.getWidth() ? Scalr.Mode.FIT_TO_HEIGHT : Scalr.Mode.FIT_TO_WIDTH;
+
+		
+			image = Scalr.resize(image,
+                    Scalr.Method.ULTRA_QUALITY,
+                    scaleTo,
+                    AppState.IMAGE_SIZE,
+                    AppState.IMAGE_SIZE);
+			
+			return image;
+		} catch(Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }
