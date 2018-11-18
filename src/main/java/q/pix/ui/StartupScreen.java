@@ -13,7 +13,6 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import q.pix.AppState;
 import q.pix.util.ImageUtil;
 
 public class StartupScreen extends JFrame {
@@ -91,17 +90,18 @@ public class StartupScreen extends JFrame {
 	
 	private void loadFiles(File selectedFile) {
 		try {
+			WorkspaceWindow dispPanel = new WorkspaceWindow();
 			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
 					File.separator + "input" + File.separator));
 			if (input.exists()) {
-				AppState.get().setInputImage(ImageUtil.loadAndScale(input));
+				dispPanel.setInputImage(ImageUtil.loadAndScale(input));
 			}
 			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
 					File.separator + "target" + File.separator));
 			if (target.exists()) {
-				AppState.get().setTargetImage(ImageUtil.loadAndScale(target));
+				dispPanel.setTargetImage(ImageUtil.loadAndScale(target));
 			}
-			DispPanel dispPanel = new DispPanel();
+			
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.display();
 			setVisible(false);
