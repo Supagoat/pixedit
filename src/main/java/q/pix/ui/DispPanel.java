@@ -1,14 +1,15 @@
 package q.pix.ui;
 
 import java.awt.AlphaComposite;
-import java.awt.Color;
+import java.awt.BorderLayout;
+import java.awt.Button;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.WindowConstants;
 
 import q.pix.AppState;
 
@@ -27,8 +28,13 @@ public class DispPanel extends JFrame {
 			        draw(g2);      
 			    }
 		});
-		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		setLayout(new GridBagLayout());
+		GridBagConstraints layoutConstraints = new GridBagConstraints();
+		layoutConstraints.gridheight = 3;
+		//layoutConstraints.
+		//setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		add(getPanel());
+		add(new Button("text"));
 	}
 
  
@@ -38,8 +44,8 @@ public class DispPanel extends JFrame {
 	}
 	
 	public void draw(Graphics2D g2) {
-		g2.setColor(Color.red);
-		g2.fillRect(0, 0, 1000, 1000);
+		//g2.setColor(Color.red);
+		//g2.fillRect(0, 0, 1000, 1000);
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5F));
 		if(AppState.get().getTargetImage() != null) {
 			g2.drawImage(AppState.get().getTargetImage(),0,0,null);
@@ -57,4 +63,8 @@ public class DispPanel extends JFrame {
 		this.panel = panel;
 	}
 
+
+
+
+	
 }

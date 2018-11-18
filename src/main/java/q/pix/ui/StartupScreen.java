@@ -1,13 +1,10 @@
 package q.pix.ui;
 
 import java.awt.GridLayout;
-import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 
-import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -15,8 +12,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
-import org.imgscalr.Scalr;
 
 import q.pix.AppState;
 import q.pix.util.ImageUtil;
@@ -29,6 +24,7 @@ public class StartupScreen extends JFrame {
 	JPanel panel;
 	private JButton newButton;
 	private JButton loadButton;
+	private JButton quitButton;
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
@@ -39,11 +35,7 @@ public class StartupScreen extends JFrame {
 		getPanel().setLayout(new GridLayout(1, 2));
 		getPanel().add(newButton());
 		getPanel().add(loadButton());
-		/*
-		 * try { bgImage = ImageIO.read(new File("D:\\dl\\Untitled-1.jpg")); }
-		 * catch(Exception e) {} imgComponent = add(new JLabel(new ImageIcon(bgImage)),
-		 * 0); imgComponent.setVisible(true); setVisible(true);
-		 */
+		getPanel().add(quitButton());
 		setVisible(true);
 	}
 
@@ -85,6 +77,18 @@ public class StartupScreen extends JFrame {
 		return loadButton;
 	}
 
+	private JButton quitButton() {
+		quitButton = new JButton("Exit");
+		quitButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				System.exit(0);
+			}
+		});
+
+		return quitButton;
+	}
+	
 	private void loadFiles(File selectedFile) {
 		try {
 			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
@@ -97,7 +101,10 @@ public class StartupScreen extends JFrame {
 			if (target.exists()) {
 				AppState.get().setTargetImage(ImageUtil.loadAndScale(target));
 			}
-			new DispPanel().display();
+			DispPanel dispPanel = new DispPanel();
+			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+			dispPanel.display();
+			setVisible(false);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
