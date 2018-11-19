@@ -6,6 +6,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
@@ -15,19 +16,21 @@ import javax.swing.JPanel;
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
 import q.pix.util.ImageUtil;
 
-public class GraphicsPanel extends JPanel implements MouseListener {
+public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionListener {
 	private static final long serialVersionUID = 1L;
 	private WorkspaceWindow workspaceWindow;
 	private int zoomLevel = 1;
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
 	private Color drawColor = Color.GREEN;
+	private int lastX,lastY;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
 		setInputImage(inputImage);
 		setTargetImage(targetImage);
 		addMouseListener(this);
+		addMouseMotionListener(this);
 	}
 
 	@Override
@@ -100,17 +103,19 @@ public class GraphicsPanel extends JPanel implements MouseListener {
 		this.targetImage = targetImage;
 	}
 
+	public void saveInput() {
+		try {
+			ImageIO.write(getInputImage(), "png", new File("test.png"));
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
 	@Override
 	public void mouseClicked(MouseEvent e) {
 		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
-			System.out.println("clicked " + e.getX() + "," + e.getY());
 			getInputImage().setRGB(e.getX(), e.getY(), Color.GREEN.getRGB());
 			repaint();
-			try {
-				ImageIO.write(getInputImage(), "png", new File("test.png"));
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
 		}
 	}
 
@@ -128,7 +133,6 @@ public class GraphicsPanel extends JPanel implements MouseListener {
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-		System.out.println("pressed");
 		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
 			getInputImage().setRGB(e.getX(), e.getY(), getDrawColor().getRGB());
 		}
@@ -137,8 +141,7 @@ public class GraphicsPanel extends JPanel implements MouseListener {
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
-		// TODO Auto-generated method stub
-
+		repaint();
 	}
 
 	public Color getDrawColor() {
@@ -149,5 +152,39 @@ public class GraphicsPanel extends JPanel implements MouseListener {
 		this.drawColor = drawColor;
 		return this;
 	}
+
+	@Override
+	public void mouseDragged(MouseEvent e) {
+		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
+			getInputImage().setRGB(e.getX(), e.getY(), getDrawColor().getRGB());
+		}
+		repaint();
+	}
+
+	@Override
+	public void mouseMoved(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public int getLastX() {
+		return lastX;
+	}
+
+	public GraphicsPanel setLastX(int lastX) {
+		this.lastX = lastX;
+		return this;
+	}
+
+	public int getLastY() {
+		return lastY;
+	}
+
+	public GraphicsPanel setLastY(int lastY) {
+		this.lastY = lastY;
+		return this;
+	}
+	
+	
 
 }
