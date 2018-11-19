@@ -1,21 +1,20 @@
-package q.pix.ui;
+package q.pix.ui.pane;
 
 import java.awt.BorderLayout;
-import java.awt.Button;
 import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import q.pix.ui.button.DisplayModeButton;
+
 
 public class WorkspaceWindow extends JFrame {
 
 	private static final long serialVersionUID = 1L;
-	private JPanel graphicsPanel;
+	private GraphicsPanel graphicsPanel;
 	private DisplayMode displayMode;
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
@@ -26,43 +25,39 @@ public class WorkspaceWindow extends JFrame {
 	}
 	
 	public WorkspaceWindow() {
-		setSize(getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(), getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
-		setGraphicsPanel(buildDisplayPanel());
+		setSize(1000,1000);//getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(), getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
 		setLayout(new BorderLayout());
-
+		setDisplayMode(DisplayMode.SideBySide);
+		setGraphicsPanel(new GraphicsPanel(this, getInputImage(), getTargetImage()));
 		add(getGraphicsPanel(), BorderLayout.CENTER);
 		JPanel topPanel = new JPanel();
 		topPanel.setSize(1000, 20);
 		topPanel.setLayout(new FlowLayout());
-		topPanel.add(new Button("Split"));
-		topPanel.add(new Button("Overlay"));
-		topPanel.get
+		topPanel.add(new DisplayModeButton(this));
+		topPanel.add(new JButton("+"));
+		topPanel.add(new JButton("-"));
 		add(topPanel, BorderLayout.PAGE_START);
+		
+		JPanel colorPanel = new JPanel();
+		colorPanel.setSize(20, 900);
+		colorPanel.setLayout(new FlowLayout());
+		colorPanel.add(new JButton("Head"));
+		colorPanel.add(new JButton("Back Arm"));
+		colorPanel.add(new JButton("Front Arm"));
+		colorPanel.add(new JButton("Body"));
+		colorPanel.add(new JButton("Back Leg"));
+		colorPanel.add(new JButton("Front Leg"));
 	}
 
 	public void display() {
 		setVisible(true);
 	}
 
-	private JPanel buildDisplayPanel() {
-		return new GraphicsPanel();
-	}
-
-	private JButton buildDispModeOverlay() {
-		JButton button = new JButton("Overlay");
-		button.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				
-			}
-		});
-	}
-
-	public JPanel getGraphicsPanel() {
+	public GraphicsPanel getGraphicsPanel() {
 		return graphicsPanel;
 	}
 
-	public WorkspaceWindow setGraphicsPanel(JPanel graphicsPanel) {
+	public WorkspaceWindow setGraphicsPanel(GraphicsPanel graphicsPanel) {
 		this.graphicsPanel = graphicsPanel;
 		return this;
 	}
@@ -73,6 +68,7 @@ public class WorkspaceWindow extends JFrame {
 
 	public WorkspaceWindow setInputImage(BufferedImage inputImage) {
 		this.inputImage = inputImage;
+		getGraphicsPanel().setInputImage(inputImage);
 		return this;
 	}
 
@@ -82,7 +78,19 @@ public class WorkspaceWindow extends JFrame {
 
 	public WorkspaceWindow setTargetImage(BufferedImage targetImage) {
 		this.targetImage = targetImage;
+		getGraphicsPanel().setTargetImage(targetImage);
 		return this;
 	}
+
+	public DisplayMode getDisplayMode() {
+		return displayMode;
+	}
+
+	public WorkspaceWindow setDisplayMode(DisplayMode displayMode) {
+		this.displayMode = displayMode;
+		return this;
+	}
+	
+	
 
 }

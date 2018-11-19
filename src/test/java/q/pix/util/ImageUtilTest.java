@@ -3,22 +3,22 @@ package q.pix.util;
 import static org.junit.Assert.assertEquals;
 
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 import org.junit.Test;
 
-import q.pix.AppState;
+import q.pix.ui.pane.WorkspaceWindow;
+
 
 public class ImageUtilTest {
 	
 	@Test
 	public void calcOffsetTest() {
-		assertEquals(2, ImageUtil.calcOffset(AppState.IMAGE_SIZE-4));
-		assertEquals(1, ImageUtil.calcOffset(AppState.IMAGE_SIZE-3));
-		assertEquals(1, ImageUtil.calcOffset(AppState.IMAGE_SIZE-2));
-		assertEquals(0, ImageUtil.calcOffset(AppState.IMAGE_SIZE));
-		assertEquals(-2, ImageUtil.calcOffset(AppState.IMAGE_SIZE+4));
+		assertEquals(2, ImageUtil.calcOffset(WorkspaceWindow.IMAGE_SIZE-4));
+		assertEquals(1, ImageUtil.calcOffset(WorkspaceWindow.IMAGE_SIZE-3));
+		assertEquals(1, ImageUtil.calcOffset(WorkspaceWindow.IMAGE_SIZE-2));
+		assertEquals(0, ImageUtil.calcOffset(WorkspaceWindow.IMAGE_SIZE));
+		assertEquals(-2, ImageUtil.calcOffset(WorkspaceWindow.IMAGE_SIZE+4));
 	}
 	
 	@Test
@@ -35,11 +35,11 @@ public class ImageUtilTest {
 		assertEquals(64, ImageUtil.calcOffset(image.getHeight()));
 		
 		BufferedImage scaled = ImageUtil.downscale(image);
-		assertEquals(AppState.IMAGE_SIZE, scaled.getWidth());
-		assertEquals(AppState.IMAGE_SIZE, scaled.getHeight());
+		assertEquals(WorkspaceWindow.IMAGE_SIZE, scaled.getWidth());
+		assertEquals(WorkspaceWindow.IMAGE_SIZE, scaled.getHeight());
 
-		for(int x=0;x<AppState.IMAGE_SIZE;x++) {
-			for(int y=0;y<AppState.IMAGE_SIZE;y++) {
+		for(int x=0;x<WorkspaceWindow.IMAGE_SIZE;x++) {
+			for(int y=0;y<WorkspaceWindow.IMAGE_SIZE;y++) {
 				if(x < 96 || x >= 160 || y < 64 || y >= 192) {
 					assertEquals("Red at "+x+","+y+" found "+ImageUtil.getRed(scaled.getRGB(x, y)), ImageUtil.getRed(Color.WHITE.getRGB()), ImageUtil.getRed(scaled.getRGB(x, y)));
 					assertEquals("Green at "+x+","+y+" found "+ImageUtil.getGreen(scaled.getRGB(x, y)), ImageUtil.getGreen(Color.WHITE.getRGB()), ImageUtil.getGreen(scaled.getRGB(x, y)));

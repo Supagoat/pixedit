@@ -1,7 +1,9 @@
-package q.pix.ui;
+package q.pix.ui.event;
 
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+
+import q.pix.ui.pane.StartupScreen;
 
 public class ReturnToStartupListener implements WindowListener {
 	private StartupScreen startupScreen;

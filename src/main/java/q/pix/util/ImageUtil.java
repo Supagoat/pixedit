@@ -8,10 +8,9 @@ import javax.imageio.ImageIO;
 
 import org.imgscalr.Scalr;
 
-import q.pix.AppState;
-
 public class ImageUtil {
-
+	public static final int IMAGE_SIZE = 256;
+	
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
 			return downscale(ImageIO.read(imageFile));
@@ -23,18 +22,11 @@ public class ImageUtil {
 	public static BufferedImage downscale(BufferedImage input) {
 		BufferedImage scaled = input;
 
-		if (scaled.getWidth() > AppState.IMAGE_SIZE || scaled.getHeight() > AppState.IMAGE_SIZE) {
-			scaled = Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, AppState.IMAGE_SIZE,
-					AppState.IMAGE_SIZE);
+		if (scaled.getWidth() > IMAGE_SIZE || scaled.getHeight() > IMAGE_SIZE) {
+			scaled = Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, IMAGE_SIZE,
+					IMAGE_SIZE);
 		}
-		BufferedImage output = new BufferedImage(AppState.IMAGE_SIZE, AppState.IMAGE_SIZE, BufferedImage.TYPE_INT_ARGB);
-
-		int background = Color.WHITE.getRGB();
-		for(int x=0;x<output.getWidth();x++) {
-			for(int y=0;y<output.getHeight();y++) {
-				output.setRGB(x, y, background);
-			}
-		}
+		BufferedImage output = blankImage();
 		
 		for(int x=0;x<scaled.getWidth();x++) {
 			for(int y=0;y<scaled.getHeight();y++) {
@@ -44,9 +36,21 @@ public class ImageUtil {
 		
 		return output;
 	}
+	
+	public static BufferedImage blankImage() {
+		BufferedImage output = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+
+		int background = Color.WHITE.getRGB();
+		for(int x=0;x<output.getWidth();x++) {
+			for(int y=0;y<output.getHeight();y++) {
+				output.setRGB(x, y, background);
+			}
+		}
+		return output;
+	}
 
 	public static int calcOffset(int size) {
-		return (AppState.IMAGE_SIZE - size) / 2;
+		return (IMAGE_SIZE - size) / 2;
 	}
 
 	public static int getRed(int rgb) {

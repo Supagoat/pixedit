@@ -1,6 +1,6 @@
 package q.pix;
 
-import q.pix.ui.StartupScreen;
+import q.pix.ui.pane.StartupScreen;
 
 public class PixEdit {
     public void startup() {

@@ -1,8 +1,9 @@
-package q.pix.ui;
+package q.pix.ui.pane;
 
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.swing.BorderFactory;
@@ -13,6 +14,7 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import q.pix.ui.event.ReturnToStartupListener;
 import q.pix.util.ImageUtil;
 
 public class StartupScreen extends JFrame {
@@ -95,11 +97,15 @@ public class StartupScreen extends JFrame {
 					File.separator + "input" + File.separator));
 			if (input.exists()) {
 				dispPanel.setInputImage(ImageUtil.loadAndScale(input));
+			} else {
+				dispPanel.setInputImage(ImageUtil.blankImage());
 			}
 			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
 					File.separator + "target" + File.separator));
 			if (target.exists()) {
 				dispPanel.setTargetImage(ImageUtil.loadAndScale(target));
+			}	else {
+				dispPanel.setTargetImage(ImageUtil.blankImage());
 			}
 			
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
