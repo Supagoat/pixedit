@@ -51,20 +51,19 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private void drawOverlay(Graphics2D g2) {
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5F));
 		if (getTargetImage() != null) {
-			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), getxView(), getyView(), null);
+			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), getxView(), getyView(), null);
+			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), 0, 0, null);
 		}
 	}
 
 	private void drawSideBySide(Graphics2D g2) {
 		if (getTargetImage() != null) {
-			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), getxView(), getyView(), null);
+			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE + getxView(), getyView(),
-					null);
+			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE, 0, null);
 		}
 	}
 
@@ -74,7 +73,12 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			for (int y = 0; y < img.getWidth(); y++) {
 				for (int xs = 0; xs < scale; xs++) {
 					for (int ys = 0; ys < scale; ys++) {
-						scaled.setRGB(x * scale + xs, y * scale + ys, img.getRGB(x, y));
+						if ((img.getWidth() > (getxView() + x) && img.getHeight() > getyView() + y)
+							&& ((getxView() + x) > -1) && ((getyView() + y) > -1)) {
+							scaled.setRGB(x * scale + xs, y * scale + ys, img.getRGB(getxView() + x, getyView() + y));
+						} else {
+							scaled.setRGB(x * scale + xs, y * scale + ys, Color.WHITE.getRGB());
+						}
 					}
 				}
 			}
@@ -149,6 +153,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		getPressedButtons()[e.getButton() - 1] = false;
+		System.out.println("Unpressing " + e.getButton());
 		repaint();
 	}
 
@@ -185,10 +190,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void onGraphicsWindowClick(MouseEvent e) {
-		if(getPressedButtons()[0]) {
+		if (getPressedButtons()[0]) {
 			paintPixels(e.getX(), e.getY());
 		}
-		if(getPressedButtons()[1]) {
+		if (getPressedButtons()[1]) {
 			moveView(e.getX(), e.getY());
 		}
 		setLastX(e.getX());
@@ -200,12 +205,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			getPressedButtons()[0] = true;
 			onGraphicsWindowClick(e);
 		}
-		if (e.getButton() == MouseEvent.BUTTON2) {
-			if(getPressedButtons()[1]) {
-				onGraphicsWindowClick(e);
-			} else {
-				initMove(e.getX(), e.getY());
-			}
+		if (getPressedButtons()[1]) {
+			onGraphicsWindowClick(e);
+		} else if (e.getButton() == MouseEvent.BUTTON2) {
+			initMove(e.getX(), e.getY());
 		}
 	}
 
@@ -222,12 +225,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		setLastX(x);
 		setLastY(y);
 		repaint();
-	}
-
-	public void engageMoveView(int x, int y) {
-		getPressedButtons()[1] = true;
-		setLastX(x);
-		setLastY(y);
 	}
 
 	public int getLastX() {
