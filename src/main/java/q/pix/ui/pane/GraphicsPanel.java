@@ -23,7 +23,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
 	private Color drawColor = Color.GREEN;
-	private int lastX,lastY;
+	private int penSize = 4;
+	private int lastX, lastY;
+	private int xView, yView;
+	private boolean[] pressedButtons;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
@@ -31,6 +34,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		setTargetImage(targetImage);
 		addMouseListener(this);
 		addMouseMotionListener(this);
+		pressedButtons = new boolean[3];
 	}
 
 	@Override
@@ -44,29 +48,38 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 	}
 
-	// public void draw(Graphics2D g2) {
-	// // g2.setColor(Color.red);
-	// // g2.fillRect(0, 0, 1000, 1000);
-	// drawOverlay(g2);
-	// }
-	//
 	private void drawOverlay(Graphics2D g2) {
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5F));
 		if (getTargetImage() != null) {
-			g2.drawImage(getTargetImage(), 0, 0, null);
+			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), getxView(), getyView(), null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(getInputImage(), 0, 0, null);
+			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), getxView(), getyView(), null);
 		}
 	}
 
 	private void drawSideBySide(Graphics2D g2) {
 		if (getTargetImage() != null) {
-			g2.drawImage(getTargetImage(), 0, 0, null);
+			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), getxView(), getyView(), null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(getInputImage(), ImageUtil.IMAGE_SIZE * getZoomLevel(), 0, null);
+			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE + getxView(), getyView(),
+					null);
 		}
+	}
+
+	public BufferedImage scaleImage(BufferedImage img, int scale) {
+		BufferedImage scaled = new BufferedImage(img.getWidth() * scale, img.getHeight() * scale, img.getType());
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getWidth(); y++) {
+				for (int xs = 0; xs < scale; xs++) {
+					for (int ys = 0; ys < scale; ys++) {
+						scaled.setRGB(x * scale + xs, y * scale + ys, img.getRGB(x, y));
+					}
+				}
+			}
+		}
+		return scaled;
 	}
 
 	public WorkspaceWindow getWorkspaceWindow() {
@@ -110,13 +123,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			ex.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public void mouseClicked(MouseEvent e) {
-		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
-			getInputImage().setRGB(e.getX(), e.getY(), Color.GREEN.getRGB());
-			repaint();
-		}
+		mouseEvent(e);
 	}
 
 	@Override
@@ -133,14 +143,12 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	@Override
 	public void mousePressed(MouseEvent e) {
-		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
-			getInputImage().setRGB(e.getX(), e.getY(), getDrawColor().getRGB());
-		}
-		repaint();
+		mouseEvent(e);
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
+		getPressedButtons()[e.getButton() - 1] = false;
 		repaint();
 	}
 
@@ -155,16 +163,71 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
-		if (e.getX() < WorkspaceWindow.IMAGE_SIZE && e.getY() < WorkspaceWindow.IMAGE_SIZE) {
-			getInputImage().setRGB(e.getX(), e.getY(), getDrawColor().getRGB());
+		mouseEvent(e);
+	}
+
+	public void paintPixels(int x, int y) {
+		for (int iterX = 0; iterX < getPenSize(); iterX++) {
+			for (int iterY = 0; iterY < getPenSize(); iterY++) {
+				int pixX = (x / getZoomLevel()) + iterX;
+				int pixY = (y / getZoomLevel()) + iterY;
+				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
+					getInputImage().setRGB(pixX, pixY, getDrawColor().getRGB());
+				}
+			}
 		}
 		repaint();
 	}
 
 	@Override
-	public void mouseMoved(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
+	public void mouseMoved(MouseEvent e) {
+		mouseEvent(e);
+	}
+
+	public void onGraphicsWindowClick(MouseEvent e) {
+		if(getPressedButtons()[0]) {
+			paintPixels(e.getX(), e.getY());
+		}
+		if(getPressedButtons()[1]) {
+			moveView(e.getX(), e.getY());
+		}
+		setLastX(e.getX());
+		setLastY(e.getY());
+	}
+
+	public void mouseEvent(MouseEvent e) {
+		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
+			getPressedButtons()[0] = true;
+			onGraphicsWindowClick(e);
+		}
+		if (e.getButton() == MouseEvent.BUTTON2) {
+			if(getPressedButtons()[1]) {
+				onGraphicsWindowClick(e);
+			} else {
+				initMove(e.getX(), e.getY());
+			}
+		}
+	}
+
+	public void initMove(int x, int y) {
+		getPressedButtons()[1] = true;
+		setLastX(x);
+		setLastY(y);
+	}
+
+	public void moveView(int x, int y) {
+		System.out.println((getxView()) + " then " + (getxView() + getLastX() - x));
+		setxView(getxView() + getLastX() - x);
+		setyView(getyView() + getLastY() - y);
+		setLastX(x);
+		setLastY(y);
+		repaint();
+	}
+
+	public void engageMoveView(int x, int y) {
+		getPressedButtons()[1] = true;
+		setLastX(x);
+		setLastY(y);
 	}
 
 	public int getLastX() {
@@ -180,11 +243,45 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		return lastY;
 	}
 
+	public int getxView() {
+		return xView;
+	}
+
+	public GraphicsPanel setxView(int xView) {
+		this.xView = xView;
+		return this;
+	}
+
+	public int getyView() {
+		return yView;
+	}
+
+	public GraphicsPanel setyView(int yView) {
+		this.yView = yView;
+		return this;
+	}
+
 	public GraphicsPanel setLastY(int lastY) {
 		this.lastY = lastY;
 		return this;
 	}
-	
-	
+
+	public int getPenSize() {
+		return penSize;
+	}
+
+	public GraphicsPanel setPenSize(int penSize) {
+		this.penSize = penSize;
+		return this;
+	}
+
+	public boolean[] getPressedButtons() {
+		return pressedButtons;
+	}
+
+	public GraphicsPanel setPressedButtons(boolean[] pressedButtons) {
+		this.pressedButtons = pressedButtons;
+		return this;
+	}
 
 }
