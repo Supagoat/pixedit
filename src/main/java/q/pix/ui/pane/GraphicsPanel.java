@@ -63,7 +63,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE, 0, null);
+			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE*getZoomLevel(), 0, null);
 		}
 	}
 
@@ -153,7 +153,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		getPressedButtons()[e.getButton() - 1] = false;
-		System.out.println("Unpressing " + e.getButton());
 		repaint();
 	}
 
@@ -219,7 +218,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void moveView(int x, int y) {
-		System.out.println((getxView()) + " then " + (getxView() + getLastX() - x));
 		setxView(getxView() + getLastX() - x);
 		setyView(getyView() + getLastY() - y);
 		setLastX(x);
