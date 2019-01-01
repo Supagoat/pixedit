@@ -49,7 +49,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	private void drawOverlay(Graphics2D g2) {
-		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5F));
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 		if (getTargetImage() != null) {
 			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
 		}
@@ -85,6 +85,8 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 		return scaled;
 	}
+	
+	
 
 	public WorkspaceWindow getWorkspaceWindow() {
 		return workspaceWindow;
@@ -176,7 +178,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				int pixX = (x / getZoomLevel()) + iterX;
 				int pixY = (y / getZoomLevel()) + iterY;
 				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
-					getInputImage().setRGB(pixX, pixY, getDrawColor().getRGB());
+					getInputImage().setRGB(pixX+getxView(), pixY+getyView(), getDrawColor().getRGB());
 				}
 			}
 		}
@@ -186,6 +188,13 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		mouseEvent(e);
+	}
+	
+	public void overlayPaintbrush(MouseEvent e) {
+		Graphics2D g2 = (Graphics2D) getGraphics();
+		g2.setColor(Color.red);
+		g2.fillRect(e.getX(), e.getY(), getPenSize()*getZoomLevel(), getPenSize()*getZoomLevel());
+		drawOverlay(g2);
 	}
 
 	public void onGraphicsWindowClick(MouseEvent e) {
@@ -200,6 +209,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void mouseEvent(MouseEvent e) {
+		overlayPaintbrush(e);
 		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
 			getPressedButtons()[0] = true;
 			onGraphicsWindowClick(e);
