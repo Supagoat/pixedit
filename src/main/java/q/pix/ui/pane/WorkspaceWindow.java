@@ -1,11 +1,13 @@
 package q.pix.ui.pane;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -44,13 +46,14 @@ public class WorkspaceWindow extends JFrame {
 
 		JPanel colorPanel = new JPanel();
 		colorPanel.setSize(20, 900);
-		colorPanel.setLayout(new FlowLayout());
-		colorPanel.add(new JButton("Head"));
-		colorPanel.add(new JButton("Back Arm"));
-		colorPanel.add(new JButton("Front Arm"));
-		colorPanel.add(new JButton("Body"));
-		colorPanel.add(new JButton("Back Leg"));
-		colorPanel.add(new JButton("Front Leg"));
+		colorPanel.setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
+		colorPanel.add(makeColorButton("Head", Color.RED));
+		colorPanel.add(makeColorButton("Back Arm", Color.GREEN));
+		colorPanel.add(makeColorButton("Front Arm", Color.BLUE));
+		colorPanel.add(makeColorButton("Body", Color.ORANGE));
+		colorPanel.add(makeColorButton("Back Leg", Color.CYAN));
+		colorPanel.add(makeColorButton("Front Leg", Color.YELLOW));
+		add(colorPanel, BorderLayout.WEST);
 	}
 
 	public void display() {
@@ -125,5 +128,17 @@ public class WorkspaceWindow extends JFrame {
 		});
 
 		return zoomInButton;
+	}
+	
+	private JButton makeColorButton(String label, Color color) {
+		JButton colorButton = new JButton(label);
+		colorButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				getGraphicsPanel().setDrawColor(color);
+			}
+		});
+
+		return colorButton;
 	}
 }

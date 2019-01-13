@@ -22,11 +22,16 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private int zoomLevel = 1;
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
+
+	private BufferedImage scaledInput;
+	private BufferedImage scaledTarget;
+
 	private Color drawColor = Color.GREEN;
 	private int penSize = 4;
 	private int lastX, lastY;
 	private int xView, yView;
 	private boolean[] pressedButtons;
+	private boolean hasPainted;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
@@ -40,31 +45,68 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		Graphics2D g2 = (Graphics2D) g;
-		if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
-			drawOverlay(g2);
-		} else {
-			drawSideBySide(g2);
+		repaintBase();
+		// Graphics2D g2 = (Graphics2D) g;
+		// if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
+		// drawOverlay(g2);
+		// } else {
+		// drawSideBySide(g2);
+		// }
+	}
+
+	public void repaintBase() {
+		if (!hasPainted) {
+			Graphics2D g2 = (Graphics2D) getGraphics();
+			if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
+				drawOverlay(g2);
+			} else {
+				drawSideBySide(g2);
+			}
 		}
+		System.out.print(".");
+		hasPainted = true;
 	}
 
 	private void drawOverlay(Graphics2D g2) {
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 		if (getTargetImage() != null) {
-			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
+			g2.drawImage(scaleTarget(), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), 0, 0, null);
+			g2.drawImage(scaleInput(), 0, 0, null);
 		}
 	}
 
 	private void drawSideBySide(Graphics2D g2) {
 		if (getTargetImage() != null) {
-			g2.drawImage(scaleImage(getTargetImage(), getZoomLevel()), 0, 0, null);
+			g2.drawImage(scaleTarget(), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleImage(getInputImage(), getZoomLevel()), ImageUtil.IMAGE_SIZE*getZoomLevel(), 0, null);
+			g2.drawImage(scaleInput(), ImageUtil.IMAGE_SIZE * getZoomLevel(), 0, null);
 		}
+	}
+
+	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
+		BufferedImage img = new BufferedImage(width, height, source.getType());
+		for (int xx = 0; xx < width; xx++) {
+			for (int yy = 0; yy < height; yy++) {
+				// img.setRGB(xx, yy, source.getRGB(xx+x, yy+y));
+				img.setRGB(xx, yy, Color.RED.getRGB());
+			}
+		}
+		return img;
+	}
+
+	private BufferedImage scaleInput() {
+		BufferedImage img = scaleImage(getInputImage(), getZoomLevel());
+		setScaledInput(img);
+		return img;
+	}
+
+	private BufferedImage scaleTarget() {
+		BufferedImage img = scaleImage(getTargetImage(), getZoomLevel());
+		setScaledTarget(img);
+		return img;
 	}
 
 	public BufferedImage scaleImage(BufferedImage img, int scale) {
@@ -74,7 +116,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				for (int xs = 0; xs < scale; xs++) {
 					for (int ys = 0; ys < scale; ys++) {
 						if ((img.getWidth() > (getxView() + x) && img.getHeight() > getyView() + y)
-							&& ((getxView() + x) > -1) && ((getyView() + y) > -1)) {
+								&& ((getxView() + x) > -1) && ((getyView() + y) > -1)) {
 							scaled.setRGB(x * scale + xs, y * scale + ys, img.getRGB(getxView() + x, getyView() + y));
 						} else {
 							scaled.setRGB(x * scale + xs, y * scale + ys, Color.WHITE.getRGB());
@@ -85,8 +127,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 		return scaled;
 	}
-	
-	
 
 	public WorkspaceWindow getWorkspaceWindow() {
 		return workspaceWindow;
@@ -155,7 +195,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	@Override
 	public void mouseReleased(MouseEvent e) {
 		getPressedButtons()[e.getButton() - 1] = false;
-		repaint();
 	}
 
 	public Color getDrawColor() {
@@ -178,23 +217,32 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				int pixX = (x / getZoomLevel()) + iterX;
 				int pixY = (y / getZoomLevel()) + iterY;
 				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
-					getInputImage().setRGB(pixX+getxView(), pixY+getyView(), getDrawColor().getRGB());
+					try {
+						getInputImage().setRGB(pixX + getxView(), pixY + getyView(), getDrawColor().getRGB());
+					} catch (Exception e) {
+						System.out.println("Out of bounds at " + x + "," + y);
+					}
 				}
 			}
 		}
-		repaint();
+		// repaint();
 	}
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		mouseEvent(e);
 	}
-	
+
 	public void overlayPaintbrush(MouseEvent e) {
 		Graphics2D g2 = (Graphics2D) getGraphics();
 		g2.setColor(Color.red);
-		g2.fillRect(e.getX(), e.getY(), getPenSize()*getZoomLevel(), getPenSize()*getZoomLevel());
-		drawOverlay(g2);
+		g2.fillRect(e.getX(), e.getY(), getPenSize() * getZoomLevel(), getPenSize() * getZoomLevel());
+		//TODO: make the overlay draw happen when needed... Figure out when the image isn't actualy displayed... drawOverlay(g2);
+	}
+
+	private void drawImgAt(BufferedImage img, int x, int y) {
+		Graphics2D g2 = (Graphics2D) getGraphics();
+		g2.drawImage(img, x, y, null);
 	}
 
 	public void onGraphicsWindowClick(MouseEvent e) {
@@ -208,7 +256,25 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		setLastY(e.getY());
 	}
 
+	/**
+	 * [0] = x [1] = y [2] = width [3] = height
+	 */
+	private int[] getImgChangeCoords(MouseEvent e) {
+		int[] dim = new int[4];
+		dim[0] = Math.min(e.getX(), getLastX());
+		dim[1] = Math.min(e.getY(), getLastY());
+		dim[2] = Math.abs(e.getX() - getLastX());
+		dim[2] = dim[2] < getPenSize() ? getPenSize() : dim[2];
+		dim[3] = Math.abs(e.getY() - getLastY());
+		dim[3] = dim[3] < getPenSize() ? getPenSize() : dim[3];
+		return dim;
+	}
+
 	public void mouseEvent(MouseEvent e) {
+		// this was the repaint being used repaint();
+		int[] changeCoords = getImgChangeCoords(e);
+		drawImgAt(subImg(getScaledInput(), changeCoords[0], changeCoords[1], changeCoords[2], changeCoords[3]),
+				changeCoords[0], changeCoords[1]);
 		overlayPaintbrush(e);
 		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
 			getPressedButtons()[0] = true;
@@ -219,6 +285,8 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		} else if (e.getButton() == MouseEvent.BUTTON2) {
 			initMove(e.getX(), e.getY());
 		}
+		setLastX(e.getX());
+		setLastY(e.getY());
 	}
 
 	public void initMove(int x, int y) {
@@ -232,7 +300,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		setyView(getyView() + getLastY() - y);
 		setLastX(x);
 		setLastY(y);
-		repaint();
+		// repaint();
 	}
 
 	public int getLastX() {
@@ -286,6 +354,24 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	public GraphicsPanel setPressedButtons(boolean[] pressedButtons) {
 		this.pressedButtons = pressedButtons;
+		return this;
+	}
+
+	public BufferedImage getScaledInput() {
+		return scaledInput;
+	}
+
+	public GraphicsPanel setScaledInput(BufferedImage scaledInput) {
+		this.scaledInput = scaledInput;
+		return this;
+	}
+
+	public BufferedImage getScaledTarget() {
+		return scaledTarget;
+	}
+
+	public GraphicsPanel setScaledTarget(BufferedImage scaledTarget) {
+		this.scaledTarget = scaledTarget;
 		return this;
 	}
 
