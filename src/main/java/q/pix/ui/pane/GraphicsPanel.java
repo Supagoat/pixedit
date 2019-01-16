@@ -31,7 +31,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private int lastX, lastY;
 	private int xView, yView;
 	private boolean[] pressedButtons;
-	private boolean hasPainted;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
@@ -44,27 +43,18 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	@Override
 	public void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		repaintBase();
-		// Graphics2D g2 = (Graphics2D) g;
-		// if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
-		// drawOverlay(g2);
-		// } else {
-		// drawSideBySide(g2);
-		// }
+		if (getLastX() != getxView() && getLastY() != getyView()) {
+			repaintBase();
+		}
 	}
 
 	public void repaintBase() {
-		if (!hasPainted) {
-			Graphics2D g2 = (Graphics2D) getGraphics();
-			if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
-				drawOverlay(g2);
-			} else {
-				drawSideBySide(g2);
-			}
+		Graphics2D g2 = (Graphics2D) getGraphics();
+		if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
+			drawOverlay(g2);
+		} else {
+			drawSideBySide(g2);
 		}
-		System.out.print(".");
-		hasPainted = true;
 	}
 
 	private void drawOverlay(Graphics2D g2) {
@@ -87,11 +77,18 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
+		if (source == null) {
+			return null;
+		}
 		BufferedImage img = new BufferedImage(width, height, source.getType());
 		for (int xx = 0; xx < width; xx++) {
 			for (int yy = 0; yy < height; yy++) {
-				// img.setRGB(xx, yy, source.getRGB(xx+x, yy+y));
-				img.setRGB(xx, yy, Color.RED.getRGB());
+				int sx = xx+x;
+				int sy = yy+y;
+				if(sx >-1 && sy > -1 && sx < source.getWidth() && sy < source.getHeight()) {
+					img.setRGB(xx, yy, source.getRGB(xx+x, yy+y));
+				} 
+				//img.setRGB(xx, yy, Color.RED.getRGB());
 			}
 		}
 		return img;
@@ -225,7 +222,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				}
 			}
 		}
-		// repaint();
 	}
 
 	@Override
@@ -237,12 +233,15 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		Graphics2D g2 = (Graphics2D) getGraphics();
 		g2.setColor(Color.red);
 		g2.fillRect(e.getX(), e.getY(), getPenSize() * getZoomLevel(), getPenSize() * getZoomLevel());
-		//TODO: make the overlay draw happen when needed... Figure out when the image isn't actualy displayed... drawOverlay(g2);
+		// TODO: make the overlay draw happen when needed... Figure out when the image
+		// isn't actualy displayed... drawOverlay(g2);
 	}
 
 	private void drawImgAt(BufferedImage img, int x, int y) {
-		Graphics2D g2 = (Graphics2D) getGraphics();
-		g2.drawImage(img, x, y, null);
+		if (img != null) {
+			Graphics2D g2 = (Graphics2D) getGraphics();
+			g2.drawImage(img, x, y, null);
+		}
 	}
 
 	public void onGraphicsWindowClick(MouseEvent e) {
@@ -261,19 +260,19 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	 */
 	private int[] getImgChangeCoords(MouseEvent e) {
 		int[] dim = new int[4];
-		dim[0] = Math.min(e.getX(), getLastX());
-		dim[1] = Math.min(e.getY(), getLastY());
+		dim[0] = Math.max(0, Math.min(e.getX(), getLastX())-10);
+		dim[1] = Math.max(0, Math.min(e.getY(), getLastY())-10);
 		dim[2] = Math.abs(e.getX() - getLastX());
-		dim[2] = dim[2] < getPenSize() ? getPenSize() : dim[2];
+		dim[2] = (dim[2] < getPenSize() ? getPenSize() : dim[2])+20;
 		dim[3] = Math.abs(e.getY() - getLastY());
-		dim[3] = dim[3] < getPenSize() ? getPenSize() : dim[3];
+		dim[3] = (dim[3] < getPenSize() ? getPenSize() : dim[3])+20;
 		return dim;
 	}
 
 	public void mouseEvent(MouseEvent e) {
 		// this was the repaint being used repaint();
 		int[] changeCoords = getImgChangeCoords(e);
-		drawImgAt(subImg(getScaledInput(), changeCoords[0], changeCoords[1], changeCoords[2], changeCoords[3]),
+		drawImgAt(subImg(getScaledTarget(), changeCoords[0], changeCoords[1], changeCoords[2], changeCoords[3]),
 				changeCoords[0], changeCoords[1]);
 		overlayPaintbrush(e);
 		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
@@ -300,7 +299,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		setyView(getyView() + getLastY() - y);
 		setLastX(x);
 		setLastY(y);
-		// repaint();
 	}
 
 	public int getLastX() {

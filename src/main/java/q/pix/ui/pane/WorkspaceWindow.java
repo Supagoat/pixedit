@@ -42,6 +42,7 @@ public class WorkspaceWindow extends JFrame {
 		topPanel.add(makeZoomButton("Z-", -1));
 		topPanel.add(makePenButton("P+", 1));
 		topPanel.add(makePenButton("P-", -1));
+		topPanel.add(makeRefreshButton());
 		add(topPanel, BorderLayout.PAGE_START);
 
 		JPanel colorPanel = new JPanel();
@@ -58,6 +59,7 @@ public class WorkspaceWindow extends JFrame {
 
 	public void display() {
 		setVisible(true);
+		getGraphicsPanel().repaintBase();
 	}
 
 	public GraphicsPanel getGraphicsPanel() {
@@ -106,7 +108,7 @@ public class WorkspaceWindow extends JFrame {
 				int changeTo = getGraphicsPanel().getZoomLevel() + changeBy;
 				if(changeTo > -1) {
 					getGraphicsPanel().setZoomLevel(changeTo);
-					getGraphicsPanel().repaint();
+					getGraphicsPanel().repaintBase();
 				}
 			}
 		});
@@ -122,7 +124,7 @@ public class WorkspaceWindow extends JFrame {
 				int changeTo = getGraphicsPanel().getPenSize() + changeBy;
 				if(changeTo > -1) {
 					getGraphicsPanel().setPenSize(changeTo);
-					getGraphicsPanel().repaint();
+					getGraphicsPanel().repaintBase();
 				}
 			}
 		});
@@ -140,5 +142,16 @@ public class WorkspaceWindow extends JFrame {
 		});
 
 		return colorButton;
+	}
+	
+	private JButton makeRefreshButton() {
+		JButton refreshButton = new JButton("Refresh");
+		refreshButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+					getGraphicsPanel().repaintBase();
+			}
+		});
+		return refreshButton;
 	}
 }
