@@ -70,6 +70,15 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 	}
 
+	/**
+	 * Creates an image out of a sub-section of another image
+	 * @param source source image
+	 * @param x left of source to copy from
+	 * @param y top of source to copy from
+	 * @param width width to copy
+	 * @param height height to copy
+	 * @return
+	 */
 	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
 		if (source == null || x > source.getWidth() || y > source.getHeight()) {
 			return null;
@@ -152,13 +161,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		this.targetImage = targetImage;
 	}
 
-	public void saveInput() {
-		try {
-			ImageIO.write(getInputImage(), "png", new File("test.png"));
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
 
 	@Override
 	public void mouseClicked(MouseEvent e) {

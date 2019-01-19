@@ -6,7 +6,9 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 
+import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -105,7 +107,7 @@ public class WorkspaceWindow extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				int changeTo = getGraphicsPanel().getZoomLevel() + changeBy;
-				if(changeTo > -1) {
+				if (changeTo > -1) {
 					getGraphicsPanel().setZoomLevel(changeTo);
 					repaint();
 				}
@@ -114,14 +116,14 @@ public class WorkspaceWindow extends JFrame {
 
 		return zoomInButton;
 	}
-	
+
 	private JButton makePenButton(String label, int changeBy) {
 		JButton zoomInButton = new JButton(label);
 		zoomInButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				int changeTo = getGraphicsPanel().getPenSize() + changeBy;
-				if(changeTo > -1) {
+				if (changeTo > -1) {
 					getGraphicsPanel().setPenSize(changeTo);
 				}
 			}
@@ -129,7 +131,7 @@ public class WorkspaceWindow extends JFrame {
 
 		return zoomInButton;
 	}
-	
+
 	private JButton makeColorButton(String label, Color color) {
 		JButton colorButton = new JButton(label);
 		colorButton.addActionListener(new ActionListener() {
@@ -141,7 +143,7 @@ public class WorkspaceWindow extends JFrame {
 
 		return colorButton;
 	}
-	
+
 	private JButton makeRefreshButton() {
 		JButton refreshButton = new JButton("Refresh");
 		refreshButton.addActionListener(new ActionListener() {
@@ -150,5 +152,20 @@ public class WorkspaceWindow extends JFrame {
 			}
 		});
 		return refreshButton;
+	}
+
+	private JButton makeSaveButton() {
+		JButton saveButton = new JButton("Save");
+		saveButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					ImageIO.write(getInputImage(), "png", new File("test.png"));
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+		});
+		return saveButton;
 	}
 }
