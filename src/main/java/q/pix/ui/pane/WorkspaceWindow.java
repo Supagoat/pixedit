@@ -59,7 +59,6 @@ public class WorkspaceWindow extends JFrame {
 
 	public void display() {
 		setVisible(true);
-		getGraphicsPanel().repaintBase();
 	}
 
 	public GraphicsPanel getGraphicsPanel() {
@@ -108,7 +107,7 @@ public class WorkspaceWindow extends JFrame {
 				int changeTo = getGraphicsPanel().getZoomLevel() + changeBy;
 				if(changeTo > -1) {
 					getGraphicsPanel().setZoomLevel(changeTo);
-					getGraphicsPanel().repaintBase();
+					repaint();
 				}
 			}
 		});
@@ -124,7 +123,6 @@ public class WorkspaceWindow extends JFrame {
 				int changeTo = getGraphicsPanel().getPenSize() + changeBy;
 				if(changeTo > -1) {
 					getGraphicsPanel().setPenSize(changeTo);
-					getGraphicsPanel().repaintBase();
 				}
 			}
 		});
@@ -149,7 +147,6 @@ public class WorkspaceWindow extends JFrame {
 		refreshButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-					getGraphicsPanel().repaintBase();
 			}
 		});
 		return refreshButton;

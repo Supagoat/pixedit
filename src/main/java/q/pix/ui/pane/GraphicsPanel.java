@@ -43,18 +43,12 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	@Override
 	public void paintComponent(Graphics g) {
-		if (getLastX() != getxView() && getLastY() != getyView()) {
-			repaintBase();
-		}
-	}
-
-	public void repaintBase() {
-		Graphics2D g2 = (Graphics2D) getGraphics();
+		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D)g;
+		drawSideBySide(g2);
 		if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
 			drawOverlay(g2);
-		} else {
-			drawSideBySide(g2);
-		}
+		} 
 	}
 
 	private void drawOverlay(Graphics2D g2) {
@@ -77,7 +71,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
-		if (source == null) {
+		if (source == null || x > source.getWidth() || y > source.getHeight()) {
 			return null;
 		}
 		BufferedImage img = new BufferedImage(width, height, source.getType());
@@ -88,7 +82,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				if(sx >-1 && sy > -1 && sx < source.getWidth() && sy < source.getHeight()) {
 					img.setRGB(xx, yy, source.getRGB(xx+x, yy+y));
 				} 
-				//img.setRGB(xx, yy, Color.RED.getRGB());
 			}
 		}
 		return img;
@@ -230,6 +223,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void overlayPaintbrush(MouseEvent e) {
+		repaint();
 		Graphics2D g2 = (Graphics2D) getGraphics();
 		g2.setColor(Color.red);
 		g2.fillRect(e.getX(), e.getY(), getPenSize() * getZoomLevel(), getPenSize() * getZoomLevel());
@@ -270,10 +264,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void mouseEvent(MouseEvent e) {
-		// this was the repaint being used repaint();
-		int[] changeCoords = getImgChangeCoords(e);
-		drawImgAt(subImg(getScaledTarget(), changeCoords[0], changeCoords[1], changeCoords[2], changeCoords[3]),
-				changeCoords[0], changeCoords[1]);
 		overlayPaintbrush(e);
 		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
 			getPressedButtons()[0] = true;
