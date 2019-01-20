@@ -2,9 +2,12 @@ package q.pix.ui.pane;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
@@ -25,9 +28,48 @@ public class WorkspaceWindow extends JFrame {
 	private BufferedImage targetImage;
 	public static final int IMAGE_SIZE = 256;
 
+	private JButton zoomInButton;
+	private JButton zoomOutButton;
+	private JButton penIncreaseButton;
+	private JButton penDecreaseButton;
+
 	public enum DisplayMode {
 		Overlay, SideBySide
 	}
+
+	private KeyListener listener = new KeyListener() {
+		@Override
+		public void keyPressed(KeyEvent arg0) {
+			switch (arg0.getKeyChar()) {
+			case '-':
+				getZoomOutButton().getActionListeners()[0].actionPerformed(null);
+				System.out.println("AAAA");
+				break;
+			case '=':
+				getZoomInButton().getActionListeners()[0].actionPerformed(null);
+				break;
+			case 's':
+				break;
+			case '[':
+				getPenDecreaseButton().getActionListeners()[0].actionPerformed(null);
+				break;
+			case ']':
+				getPenIncreaseButton().getActionListeners()[0].actionPerformed(null);
+				break;
+			}
+		}
+
+		@Override
+		public void keyReleased(KeyEvent arg0) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void keyTyped(KeyEvent arg0) {
+
+		}
+	};
 
 	public WorkspaceWindow() {
 		setSize(1000, 1000);// getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(),
@@ -40,10 +82,10 @@ public class WorkspaceWindow extends JFrame {
 		topPanel.setSize(1000, 20);
 		topPanel.setLayout(new FlowLayout());
 		topPanel.add(new DisplayModeButton(this));
-		topPanel.add(makeZoomButton("Z+", 1));
-		topPanel.add(makeZoomButton("Z-", -1));
-		topPanel.add(makePenButton("P+", 1));
-		topPanel.add(makePenButton("P-", -1));
+		topPanel.add(setZoomInButton(makeZoomButton("Z+", 1)));
+		topPanel.add(setZoomOutButton(makeZoomButton("Z-", -1)));
+		topPanel.add(setPenIncreaseButton(makePenButton("P+", 1)));
+		topPanel.add(setPenDecreaseButton(makePenButton("P-", -1)));
 		topPanel.add(makeRefreshButton());
 		add(topPanel, BorderLayout.PAGE_START);
 
@@ -57,6 +99,15 @@ public class WorkspaceWindow extends JFrame {
 		colorPanel.add(makeColorButton("Back Leg", Color.CYAN));
 		colorPanel.add(makeColorButton("Front Leg", Color.YELLOW));
 		add(colorPanel, BorderLayout.WEST);
+
+		addListener(topPanel);
+		addListener(colorPanel);
+		addListener(getGraphicsPanel());
+	}
+
+	public void addListener(Component component) {
+		component.addKeyListener(listener);
+		component.setFocusable(true);
 	}
 
 	public void display() {
@@ -113,13 +164,13 @@ public class WorkspaceWindow extends JFrame {
 				}
 			}
 		});
-
+		addListener(zoomInButton);
 		return zoomInButton;
 	}
 
 	private JButton makePenButton(String label, int changeBy) {
-		JButton zoomInButton = new JButton(label);
-		zoomInButton.addActionListener(new ActionListener() {
+		JButton penButton = new JButton(label);
+		penButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				int changeTo = getGraphicsPanel().getPenSize() + changeBy;
@@ -128,8 +179,8 @@ public class WorkspaceWindow extends JFrame {
 				}
 			}
 		});
-
-		return zoomInButton;
+		addListener(penButton);
+		return penButton;
 	}
 
 	private JButton makeColorButton(String label, Color color) {
@@ -140,7 +191,7 @@ public class WorkspaceWindow extends JFrame {
 				getGraphicsPanel().setDrawColor(color);
 			}
 		});
-
+		addListener(colorButton);
 		return colorButton;
 	}
 
@@ -151,6 +202,7 @@ public class WorkspaceWindow extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 			}
 		});
+		addListener(refreshButton);
 		return refreshButton;
 	}
 
@@ -166,6 +218,44 @@ public class WorkspaceWindow extends JFrame {
 				}
 			}
 		});
+		addListener(saveButton);
 		return saveButton;
 	}
+
+	private JButton getZoomInButton() {
+		return zoomInButton;
+	}
+
+	private JButton setZoomInButton(JButton zoomInButton) {
+		this.zoomInButton = zoomInButton;
+		return zoomInButton;
+	}
+
+	private JButton getZoomOutButton() {
+		return zoomOutButton;
+	}
+
+	private JButton setZoomOutButton(JButton zoomOutButton) {
+		this.zoomOutButton = zoomOutButton;
+		return zoomOutButton;
+	}
+
+	private JButton getPenIncreaseButton() {
+		return penIncreaseButton;
+	}
+
+	private JButton setPenIncreaseButton(JButton penIncreaseButton) {
+		this.penIncreaseButton = penIncreaseButton;
+		return penIncreaseButton;
+	}
+
+	private JButton getPenDecreaseButton() {
+		return penDecreaseButton;
+	}
+
+	private JButton setPenDecreaseButton(JButton penDecreaseButton) {
+		this.penDecreaseButton = penDecreaseButton;
+		return penDecreaseButton;
+	}
+
 }
