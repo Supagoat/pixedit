@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.Optional;
 
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
@@ -32,7 +33,10 @@ public class WorkspaceWindow extends JFrame {
 	private JButton zoomOutButton;
 	private JButton penIncreaseButton;
 	private JButton penDecreaseButton;
-
+	private int backgroundColor;
+	
+	private JButton activeColor;
+	private JPanel colorPanel;
 	public enum DisplayMode {
 		Overlay, SideBySide
 	}
@@ -43,7 +47,6 @@ public class WorkspaceWindow extends JFrame {
 			switch (arg0.getKeyChar()) {
 			case '-':
 				getZoomOutButton().getActionListeners()[0].actionPerformed(null);
-				System.out.println("AAAA");
 				break;
 			case '=':
 				getZoomInButton().getActionListeners()[0].actionPerformed(null);
@@ -89,20 +92,21 @@ public class WorkspaceWindow extends JFrame {
 		topPanel.add(makeRefreshButton());
 		add(topPanel, BorderLayout.PAGE_START);
 
-		JPanel colorPanel = new JPanel();
-		colorPanel.setSize(20, 900);
-		colorPanel.setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
-		colorPanel.add(makeColorButton("Head", Color.RED));
-		colorPanel.add(makeColorButton("Back Arm", Color.GREEN));
-		colorPanel.add(makeColorButton("Front Arm", Color.BLUE));
-		colorPanel.add(makeColorButton("Body", Color.ORANGE));
-		colorPanel.add(makeColorButton("Back Leg", Color.CYAN));
-		colorPanel.add(makeColorButton("Front Leg", Color.YELLOW));
-		add(colorPanel, BorderLayout.WEST);
+		setColorPanel(new JPanel());
+		getColorPanel().setSize(20, 900);
+		getColorPanel().setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
+		getColorPanel().add(makeColorButton("Head", Color.RED));
+		getColorPanel().add(makeColorButton("Back Arm", Color.GREEN));
+		getColorPanel().add(makeColorButton("Front Arm", Color.BLUE));
+		getColorPanel().add(makeColorButton("Body", Color.ORANGE));
+		getColorPanel().add(makeColorButton("Back Leg", Color.CYAN));
+		getColorPanel().add(makeColorButton("Front Leg", Color.YELLOW));
+		add(getColorPanel(), BorderLayout.WEST);
 
 		addListener(topPanel);
-		addListener(colorPanel);
+		addListener(getColorPanel());
 		addListener(getGraphicsPanel());
+
 	}
 
 	public void addListener(Component component) {
@@ -140,6 +144,12 @@ public class WorkspaceWindow extends JFrame {
 	public WorkspaceWindow setTargetImage(BufferedImage targetImage) {
 		this.targetImage = targetImage;
 		getGraphicsPanel().setTargetImage(targetImage);
+		if(deriveBackgroundColor(targetImage).isPresent()) {
+			setBackgroundColor(deriveBackgroundColor(targetImage).get());
+			getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor())));
+		} else {
+			System.out.println("Could not derive background color");
+		}
 		return this;
 	}
 
@@ -150,6 +160,16 @@ public class WorkspaceWindow extends JFrame {
 	public WorkspaceWindow setDisplayMode(DisplayMode displayMode) {
 		this.displayMode = displayMode;
 		return this;
+	}
+	
+	public Optional<Integer> deriveBackgroundColor(BufferedImage image) {
+		int ul = image.getRGB(0, 0);
+		if(ul == image.getRGB(image.getWidth()-1, image.getHeight()-1) &&
+				ul == image.getRGB(0, image.getHeight()-1) &&
+				ul == image.getRGB(image.getWidth()-1, 0)) {
+			return Optional.of(ul);
+		}
+		return Optional.empty();
 	}
 
 	private JButton makeZoomButton(String label, int changeBy) {
@@ -189,6 +209,11 @@ public class WorkspaceWindow extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				getGraphicsPanel().setDrawColor(color);
+				if(getActiveColor() != null) {
+					getActiveColor().setBackground(Color.WHITE);
+				}
+				colorButton.setBackground(Color.GRAY);
+				setActiveColor(colorButton);
 			}
 		});
 		addListener(colorButton);
@@ -257,5 +282,34 @@ public class WorkspaceWindow extends JFrame {
 		this.penDecreaseButton = penDecreaseButton;
 		return penDecreaseButton;
 	}
+
+	public int getBackgroundColor() {
+		return backgroundColor;
+	}
+
+	public WorkspaceWindow setBackgroundColor(int backgroundColor) {
+		this.backgroundColor = backgroundColor;
+		return this;
+	}
+
+	public JButton getActiveColor() {
+		return activeColor;
+	}
+
+	public WorkspaceWindow setActiveColor(JButton activeColor) {
+		this.activeColor = activeColor;
+		return this;
+	}
+
+	public JPanel getColorPanel() {
+		return colorPanel;
+	}
+
+	public WorkspaceWindow setColorPanel(JPanel colorPanel) {
+		this.colorPanel = colorPanel;
+		return this;
+	}
+	
+	
 
 }
