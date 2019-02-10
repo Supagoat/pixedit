@@ -33,10 +33,14 @@ public class WorkspaceWindow extends JFrame {
 	private JButton zoomOutButton;
 	private JButton penIncreaseButton;
 	private JButton penDecreaseButton;
+	private JButton saveButton;
 	private int backgroundColor;
+	private boolean drawOutsideLines;
 	
 	private JButton activeColor;
 	private JPanel colorPanel;
+	private JPanel topPanel;
+	
 	public enum DisplayMode {
 		Overlay, SideBySide
 	}
@@ -81,16 +85,16 @@ public class WorkspaceWindow extends JFrame {
 		setDisplayMode(DisplayMode.SideBySide);
 		setGraphicsPanel(new GraphicsPanel(this, getInputImage(), getTargetImage()));
 		add(getGraphicsPanel(), BorderLayout.CENTER);
-		JPanel topPanel = new JPanel();
-		topPanel.setSize(1000, 20);
-		topPanel.setLayout(new FlowLayout());
-		topPanel.add(new DisplayModeButton(this));
-		topPanel.add(setZoomInButton(makeZoomButton("Z+", 1)));
-		topPanel.add(setZoomOutButton(makeZoomButton("Z-", -1)));
-		topPanel.add(setPenIncreaseButton(makePenButton("P+", 1)));
-		topPanel.add(setPenDecreaseButton(makePenButton("P-", -1)));
-		topPanel.add(makeRefreshButton());
-		add(topPanel, BorderLayout.PAGE_START);
+		setTopPanel(new JPanel());
+		getTopPanel().setSize(1000, 20);
+		getTopPanel().setLayout(new FlowLayout());
+		getTopPanel().add(new DisplayModeButton(this));
+		getTopPanel().add(setZoomInButton(makeZoomButton("Z+", 1)));
+		getTopPanel().add(setZoomOutButton(makeZoomButton("Z-", -1)));
+		getTopPanel().add(setPenIncreaseButton(makePenButton("P+", 1)));
+		getTopPanel().add(setPenDecreaseButton(makePenButton("P-", -1)));
+		//topPanel.add(makeDrawOutsideLinesButton());
+		add(getTopPanel(), BorderLayout.PAGE_START);
 
 		setColorPanel(new JPanel());
 		getColorPanel().setSize(20, 900);
@@ -114,6 +118,10 @@ public class WorkspaceWindow extends JFrame {
 		component.setFocusable(true);
 	}
 
+	public void setInputFilePath(String path) {
+		topPanel.add(makeSaveButton(path));
+	}
+	
 	public void display() {
 		setVisible(true);
 	}
@@ -230,14 +238,37 @@ public class WorkspaceWindow extends JFrame {
 		addListener(refreshButton);
 		return refreshButton;
 	}
+	
 
-	private JButton makeSaveButton() {
+	private JButton makeDrawOutsideLinesButton() {
+		String linesIgnored = "Lines Ignored";
+		String linesRespected = "Lines Respected";
+		JButton refreshButton = new JButton(linesIgnored);
+		refreshButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(refreshButton.getText().equals(linesIgnored)) {
+					refreshButton.setText(linesRespected);
+					setDrawOutsideLines(false);
+					
+				} else {
+					refreshButton.setText(linesIgnored);
+					setDrawOutsideLines(true);
+				}
+			}
+		});
+		addListener(refreshButton);
+		return refreshButton;
+	}
+
+
+	private JButton makeSaveButton(String inputFilePath) {
 		JButton saveButton = new JButton("Save");
 		saveButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					ImageIO.write(getInputImage(), "png", new File("test.png"));
+					ImageIO.write(getInputImage(), "png", new File(inputFilePath));
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -307,6 +338,33 @@ public class WorkspaceWindow extends JFrame {
 
 	public WorkspaceWindow setColorPanel(JPanel colorPanel) {
 		this.colorPanel = colorPanel;
+		return this;
+	}
+
+	public boolean isDrawOutsideLines() {
+		return drawOutsideLines;
+	}
+
+	public WorkspaceWindow setDrawOutsideLines(boolean drawOutsideLines) {
+		this.drawOutsideLines = drawOutsideLines;
+		return this;
+	}
+
+	public JButton getSaveButton() {
+		return saveButton;
+	}
+
+	public WorkspaceWindow setSaveButton(JButton saveButton) {
+		this.saveButton = saveButton;
+		return this;
+	}
+
+	public JPanel getTopPanel() {
+		return topPanel;
+	}
+
+	public WorkspaceWindow setTopPanel(JPanel topPanel) {
+		this.topPanel = topPanel;
 		return this;
 	}
 	

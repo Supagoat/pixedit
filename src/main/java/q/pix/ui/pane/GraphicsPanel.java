@@ -209,6 +209,9 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				int pixX = (x / getZoomLevel()) + iterX;
 				int pixY = (y / getZoomLevel()) + iterY;
 				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
+//					if(!getWorkspaceWindow().isDrawOutsideLines() && getTargetImage().getRGB(pixX + getxView(), pixY + getyView()) == getWorkspaceWindow().getBackgroundColor()) {
+//						continue;
+//					}
 					try {
 						getInputImage().setRGB(pixX + getxView(), pixY + getyView(), getDrawColor().getRGB());
 					} catch (Exception e) {

@@ -107,7 +107,7 @@ public class StartupScreen extends JFrame {
 			}	else {
 				dispPanel.setTargetImage(ImageUtil.blankImage());
 			}
-			
+			dispPanel.setInputFilePath(input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.display();
 			setVisible(false);
