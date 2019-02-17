@@ -8,12 +8,14 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
+import q.pix.ui.pane.renderjob.ScaleImageJob;
 import q.pix.util.ImageUtil;
 
 public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionListener {
@@ -31,6 +33,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private int lastX, lastY;
 	private int xView, yView;
 	private boolean[] pressedButtons;
+	private ThreadPoolExecutor threadEx;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
@@ -39,16 +42,17 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		pressedButtons = new boolean[3];
+		setThreadEx(new ThreadPoolExecutor(8, 8, 10l, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>()));
 	}
 
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		Graphics2D g2 = (Graphics2D)g;
+		Graphics2D g2 = (Graphics2D) g;
 		drawSideBySide(g2);
 		if (getWorkspaceWindow().getDisplayMode() == DisplayMode.Overlay) {
 			drawOverlay(g2);
-		} 
+		}
 	}
 
 	private void drawOverlay(Graphics2D g2) {
@@ -70,27 +74,43 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 	}
 
+	public String a() {
+		return "A";
+	}
+
 	/**
 	 * Creates an image out of a sub-section of another image
-	 * @param source source image
-	 * @param x left of source to copy from
-	 * @param y top of source to copy from
-	 * @param width width to copy
-	 * @param height height to copy
+	 * 
+	 * @param source
+	 *            source image
+	 * @param x
+	 *            left of source to copy from
+	 * @param y
+	 *            top of source to copy from
+	 * @param width
+	 *            width to copy
+	 * @param height
+	 *            height to copy
 	 * @return
 	 */
 	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
 		if (source == null || x > source.getWidth() || y > source.getHeight()) {
 			return null;
 		}
+		// for(int xSplit=0;xSplit<2;xSplit++) {
+		// for(int ySplit=0;ySplit<2;xSplit++) {
+		//
+		// }
+		// }
+		// getThreadEx().execute(new Renderer());
 		BufferedImage img = new BufferedImage(width, height, source.getType());
 		for (int xx = 0; xx < width; xx++) {
 			for (int yy = 0; yy < height; yy++) {
-				int sx = xx+x;
-				int sy = yy+y;
-				if(sx >-1 && sy > -1 && sx < source.getWidth() && sy < source.getHeight()) {
-					img.setRGB(xx, yy, source.getRGB(xx+x, yy+y));
-				} 
+				int sx = xx + x;
+				int sy = yy + y;
+				if (sx > -1 && sy > -1 && sx < source.getWidth() && sy < source.getHeight()) {
+					img.setRGB(xx, yy, source.getRGB(xx + x, yy + y));
+				}
 			}
 		}
 		return img;
@@ -109,9 +129,20 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public BufferedImage scaleImage(BufferedImage img, int scale) {
-		BufferedImage scaled = new BufferedImage(img.getWidth() * scale, img.getHeight() * scale, img.getType());
+		BufferedImage scaled = new BufferedImage(img.getWidth() * scale, img.getHeight() * scale, img.getType());		
+		
+
+//		RenderMaster renderMaster = new RenderMaster(getThreadEx(), 4);
+//		for (int xSplit = 0; xSplit < 2; xSplit++) {
+//			for (int ySplit = 0; ySplit < 2; ySplit++) {
+//				ScaleImageJob job = new ScaleImageJob(this, img, scaled, (img.getWidth() / 2) * xSplit,
+//						(img.getHeight() / 2) * ySplit, img.getWidth() / 2, img.getHeight() / 2, scale);
+//				renderMaster.submit(job);
+//			}
+//		}
+		//
 		for (int x = 0; x < img.getWidth(); x++) {
-			for (int y = 0; y < img.getWidth(); y++) {
+			for (int y = 0; y < img.getHeight(); y++) {
 				for (int xs = 0; xs < scale; xs++) {
 					for (int ys = 0; ys < scale; ys++) {
 						if ((img.getWidth() > (getxView() + x) && img.getHeight() > getyView() + y)
@@ -124,6 +155,14 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				}
 			}
 		}
+
+//		synchronized (renderMaster) {
+//			try {
+//				renderMaster.wait();
+//			} catch (InterruptedException e) {
+//				throw new RuntimeException(e);
+//			}
+//		}
 		return scaled;
 	}
 
@@ -160,7 +199,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	public void setTargetImage(BufferedImage targetImage) {
 		this.targetImage = targetImage;
 	}
-
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
@@ -209,9 +247,11 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 				int pixX = (x / getZoomLevel()) + iterX;
 				int pixY = (y / getZoomLevel()) + iterY;
 				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
-//					if(!getWorkspaceWindow().isDrawOutsideLines() && getTargetImage().getRGB(pixX + getxView(), pixY + getyView()) == getWorkspaceWindow().getBackgroundColor()) {
-//						continue;
-//					}
+					// if(!getWorkspaceWindow().isDrawOutsideLines() && getTargetImage().getRGB(pixX
+					// + getxView(), pixY + getyView()) ==
+					// getWorkspaceWindow().getBackgroundColor()) {
+					// continue;
+					// }
 					try {
 						getInputImage().setRGB(pixX + getxView(), pixY + getyView(), getDrawColor().getRGB());
 					} catch (Exception e) {
@@ -259,12 +299,12 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	 */
 	private int[] getImgChangeCoords(MouseEvent e) {
 		int[] dim = new int[4];
-		dim[0] = Math.max(0, Math.min(e.getX(), getLastX())-10);
-		dim[1] = Math.max(0, Math.min(e.getY(), getLastY())-10);
+		dim[0] = Math.max(0, Math.min(e.getX(), getLastX()) - 10);
+		dim[1] = Math.max(0, Math.min(e.getY(), getLastY()) - 10);
 		dim[2] = Math.abs(e.getX() - getLastX());
-		dim[2] = (dim[2] < getPenSize() ? getPenSize() : dim[2])+20;
+		dim[2] = (dim[2] < getPenSize() ? getPenSize() : dim[2]) + 20;
 		dim[3] = Math.abs(e.getY() - getLastY());
-		dim[3] = (dim[3] < getPenSize() ? getPenSize() : dim[3])+20;
+		dim[3] = (dim[3] < getPenSize() ? getPenSize() : dim[3]) + 20;
 		return dim;
 	}
 
@@ -365,6 +405,15 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	public GraphicsPanel setScaledTarget(BufferedImage scaledTarget) {
 		this.scaledTarget = scaledTarget;
+		return this;
+	}
+
+	public ThreadPoolExecutor getThreadEx() {
+		return threadEx;
+	}
+
+	public GraphicsPanel setThreadEx(ThreadPoolExecutor threadEx) {
+		this.threadEx = threadEx;
 		return this;
 	}
 
