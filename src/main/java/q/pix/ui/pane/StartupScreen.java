@@ -3,7 +3,6 @@ package q.pix.ui.pane;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.swing.BorderFactory;
@@ -15,6 +14,7 @@ import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import q.pix.ui.event.ReturnToStartupListener;
+import q.pix.util.FileUtil;
 import q.pix.util.ImageUtil;
 
 public class StartupScreen extends JFrame {
@@ -23,7 +23,7 @@ public class StartupScreen extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	JPanel panel;
-	private JButton newButton;
+	private JButton makeSetButton;
 	private JButton loadButton;
 	private JButton quitButton;
 
@@ -34,7 +34,7 @@ public class StartupScreen extends JFrame {
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 		getPanel().setLayout(new GridLayout(1, 2));
-		getPanel().add(newButton());
+		getPanel().add(toTrainSetButton());
 		getPanel().add(loadButton());
 		getPanel().add(quitButton());
 		setVisible(true);
@@ -49,15 +49,25 @@ public class StartupScreen extends JFrame {
 		add(panel);
 	}
 
-	private JButton newButton() {
-		newButton = new JButton("New");
-		newButton.addActionListener(new ActionListener() {
+	private JButton toTrainSetButton() {
+		makeSetButton = new JButton("Make Trainset");
+		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
 
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					try {
+						ImageUtil.makeTrainSet(fc.getSelectedFile().getAbsolutePath());
+					} catch(Exception ex) {
+						// TODO: Get alert modals done
+					}
+				}
 			}
 		});
-		return newButton;
+		return makeSetButton;
 	}
 
 	private JButton loadButton() {
@@ -93,15 +103,13 @@ public class StartupScreen extends JFrame {
 	private void loadFiles(File selectedFile) {
 		try {
 			WorkspaceWindow dispPanel = new WorkspaceWindow();
-			File input = new File(selectedFile.getAbsolutePath().replace(File.separator + "target" + File.separator,
-					File.separator + "input" + File.separator));
+			File input = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
 			if (input.exists()) {
 				dispPanel.setInputImage(ImageUtil.loadAndScale(input));
 			} else {
 				dispPanel.setInputImage(ImageUtil.blankImage());
 			}
-			File target = new File(selectedFile.getAbsolutePath().replace(File.separator + "input" + File.separator,
-					File.separator + "target" + File.separator));
+			File target = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
 			if (target.exists()) {
 				dispPanel.setTargetImage(ImageUtil.loadAndScale(target));
 			}	else {
@@ -116,5 +124,6 @@ public class StartupScreen extends JFrame {
 		}
 	}
 	
+
 
 }
