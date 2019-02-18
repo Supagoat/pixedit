@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.JPanel;
 
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
-import q.pix.ui.pane.renderjob.ScaleImageJob;
 import q.pix.util.ImageUtil;
 
 public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionListener {
@@ -55,7 +54,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 	}
 
-	private void drawOverlay(Graphics2D g2) {
+	protected void drawOverlay(Graphics2D g2) {
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 		if (getTargetImage() != null) {
 			g2.drawImage(scaleTarget(), 0, 0, null);
@@ -65,7 +64,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		}
 	}
 
-	private void drawSideBySide(Graphics2D g2) {
+	protected void drawSideBySide(Graphics2D g2) {
 		if (getTargetImage() != null) {
 			g2.drawImage(scaleTarget(), 0, 0, null);
 		}
@@ -93,7 +92,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	 *            height to copy
 	 * @return
 	 */
-	private BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
+	protected BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
 		if (source == null || x > source.getWidth() || y > source.getHeight()) {
 			return null;
 		}
@@ -116,13 +115,13 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		return img;
 	}
 
-	private BufferedImage scaleInput() {
+	protected BufferedImage scaleInput() {
 		BufferedImage img = scaleImage(getInputImage(), getZoomLevel());
 		setScaledInput(img);
 		return img;
 	}
 
-	private BufferedImage scaleTarget() {
+	protected BufferedImage scaleTarget() {
 		BufferedImage img = scaleImage(getTargetImage(), getZoomLevel());
 		setScaledTarget(img);
 		return img;
@@ -241,42 +240,14 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		mouseEvent(e);
 	}
 
-	public void paintPixels(int x, int y) {
-		for (int iterX = 0; iterX < getPenSize(); iterX++) {
-			for (int iterY = 0; iterY < getPenSize(); iterY++) {
-				int pixX = (x / getZoomLevel()) + iterX;
-				int pixY = (y / getZoomLevel()) + iterY;
-				if (pixX > -1 && pixY > -1 && pixX < WorkspaceWindow.IMAGE_SIZE && pixY < WorkspaceWindow.IMAGE_SIZE) {
-					// if(!getWorkspaceWindow().isDrawOutsideLines() && getTargetImage().getRGB(pixX
-					// + getxView(), pixY + getyView()) ==
-					// getWorkspaceWindow().getBackgroundColor()) {
-					// continue;
-					// }
-					try {
-						getInputImage().setRGB(pixX + getxView(), pixY + getyView(), getDrawColor().getRGB());
-					} catch (Exception e) {
-						System.out.println("Out of bounds at " + x + "," + y);
-					}
-				}
-			}
-		}
-	}
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		mouseEvent(e);
 	}
 
-	public void overlayPaintbrush(MouseEvent e) {
-		repaint();
-		Graphics2D g2 = (Graphics2D) getGraphics();
-		g2.setColor(Color.red);
-		g2.fillRect(e.getX(), e.getY(), getPenSize() * getZoomLevel(), getPenSize() * getZoomLevel());
-		// TODO: make the overlay draw happen when needed... Figure out when the image
-		// isn't actualy displayed... drawOverlay(g2);
-	}
 
-	private void drawImgAt(BufferedImage img, int x, int y) {
+	protected void drawImgAt(BufferedImage img, int x, int y) {
 		if (img != null) {
 			Graphics2D g2 = (Graphics2D) getGraphics();
 			g2.drawImage(img, x, y, null);
@@ -284,9 +255,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void onGraphicsWindowClick(MouseEvent e) {
-		if (getPressedButtons()[0]) {
-			paintPixels(e.getX(), e.getY());
-		}
 		if (getPressedButtons()[1]) {
 			moveView(e.getX(), e.getY());
 		}
@@ -297,7 +265,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	/**
 	 * [0] = x [1] = y [2] = width [3] = height
 	 */
-	private int[] getImgChangeCoords(MouseEvent e) {
+	protected int[] getImgChangeCoords(MouseEvent e) {
 		int[] dim = new int[4];
 		dim[0] = Math.max(0, Math.min(e.getX(), getLastX()) - 10);
 		dim[1] = Math.max(0, Math.min(e.getY(), getLastY()) - 10);
@@ -309,7 +277,6 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	public void mouseEvent(MouseEvent e) {
-		overlayPaintbrush(e);
 		if (e.getButton() == MouseEvent.BUTTON1 || getPressedButtons()[0]) {
 			getPressedButtons()[0] = true;
 			onGraphicsWindowClick(e);

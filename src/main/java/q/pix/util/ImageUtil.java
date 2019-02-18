@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import javax.imageio.ImageIO;
 
@@ -68,6 +69,46 @@ public class ImageUtil {
 		return rgb & 0x000000FF;
 	}
 	
+	public static void combineImages(String rightImageDir, Optional<String> leftImageDir, boolean blanksWhereMissing, String outputDir) throws IOException {
+		if(!leftImageDir.isPresent() && !blanksWhereMissing) {
+			throw new IllegalArgumentException("Either the dir containing the second set of images must exist or I must be allowed to generate blanks where they are missing");
+		}
+		List<File> inputs = Arrays.asList(new File(rightImageDir).listFiles());
+		new File(outputDir).mkdir();
+		for(File input : inputs) {
+			File target = null;
+			if(leftImageDir.isPresent()) {
+				target = new File(leftImageDir.get()+File.separator+input.getName());
+				if(!target.exists() && !blanksWhereMissing) {
+					continue;
+				}
+			}
+			BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+			if(target != null && target.exists()) {
+				output.getGraphics().drawImage(ImageIO.read(target), 0, 0, null);
+			} else {
+				output.getGraphics().drawImage(blankImage(), 0, 0, null);
+			}
+			output.getGraphics().drawImage(ImageIO.read(input), IMAGE_SIZE, 0, null);
+
+			ImageIO.write(output, "png", new File(outputDir+File.separator+input.getName()));
+		}
+	}
+	
+	public static void makeTrainSet(String dir) throws IOException {
+		List<String> contents = Arrays.asList(new File(dir).list());
+		if(!contents.contains(FileUtil.INPUT_DIR) || !contents.contains(FileUtil.TARGET_DIR)) {
+			throw new IllegalArgumentException("Directory must contain input and target subdirectories");
+		}
+		String outDir = dir+File.separator+FileUtil.TRAIN_DIR; 
+		combineImages(dir+File.separator+FileUtil.INPUT_DIR, Optional.ofNullable(dir+File.separator+FileUtil.TARGET_DIR), false, outDir);
+	}
+	
+	public static void makeGenerationInputs(String dir) throws IOException {
+		combineImages(dir, Optional.empty(),true, FileUtil.inputToTestsetOutputDir(dir));
+	}
+	
+	/*
 	public static void makeTrainSet(String dir) throws IOException {
 		List<String> contents = Arrays.asList(new File(dir).list());
 		if(!contents.contains(FileUtil.INPUT_DIR) || !contents.contains(FileUtil.TARGET_DIR)) {
@@ -92,5 +133,12 @@ public class ImageUtil {
 
 			ImageIO.write(output, "png", new File(input.getAbsolutePath().replace(FileUtil.INPUT_DIR, FileUtil.TRAIN_DIR)));
 		}
+	}
+	*/
+	private static BufferedImage loadOptional(Optional<String> path) throws IOException {
+		if(!path.isPresent() || !new File(path.get()).exists()) {
+			return blankImage();
+		}
+		return ImageIO.read(new File(path.get()));
 	}
 }

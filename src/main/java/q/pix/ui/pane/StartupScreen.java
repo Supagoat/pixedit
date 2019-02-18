@@ -3,6 +3,7 @@ package q.pix.ui.pane;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.swing.BorderFactory;
@@ -14,6 +15,7 @@ import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import q.pix.ui.event.ReturnToStartupListener;
+import q.pix.ui.pane.paintmode.PaintingPanel;
 import q.pix.util.FileUtil;
 import q.pix.util.ImageUtil;
 
@@ -24,17 +26,19 @@ public class StartupScreen extends JFrame {
 	private static final long serialVersionUID = 1L;
 	JPanel panel;
 	private JButton makeSetButton;
+	private JButton generateButton;
 	private JButton loadButton;
 	private JButton quitButton;
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
-		setSize(300, 150);
+		setSize(600, 150);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 		getPanel().setLayout(new GridLayout(1, 2));
 		getPanel().add(toTrainSetButton());
+		getPanel().add(generateButton());
 		getPanel().add(loadButton());
 		getPanel().add(quitButton());
 		setVisible(true);
@@ -50,7 +54,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton toTrainSetButton() {
-		makeSetButton = new JButton("Make Trainset");
+		makeSetButton = new JButton("Trainset");
 		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -68,6 +72,27 @@ public class StartupScreen extends JFrame {
 			}
 		});
 		return makeSetButton;
+	}
+	
+	private JButton generateButton() {
+		generateButton = new JButton("Generate");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					try {
+						ImageUtil.makeGenerationInputs(fc.getSelectedFile().getAbsolutePath());
+					} catch(Exception ex) {
+						// TODO: Get alert modals done
+					}
+				}
+			}
+		});
+		return generateButton;
 	}
 
 	private JButton loadButton() {
@@ -102,19 +127,21 @@ public class StartupScreen extends JFrame {
 	
 	private void loadFiles(File selectedFile) {
 		try {
-			WorkspaceWindow dispPanel = new WorkspaceWindow();
+			BufferedImage inputImage, targetImage;
 			File input = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
 			if (input.exists()) {
-				dispPanel.setInputImage(ImageUtil.loadAndScale(input));
+				inputImage = ImageUtil.loadAndScale(input);
 			} else {
-				dispPanel.setInputImage(ImageUtil.blankImage());
+				inputImage = ImageUtil.blankImage();
 			}
 			File target = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
 			if (target.exists()) {
-				dispPanel.setTargetImage(ImageUtil.loadAndScale(target));
+				targetImage = ImageUtil.loadAndScale(target);
 			}	else {
-				dispPanel.setTargetImage(ImageUtil.blankImage());
+				targetImage = ImageUtil.blankImage();
 			}
+			WorkspaceWindow dispPanel = new WorkspaceWindow();
+			dispPanel.setGraphicsPanel(new PaintingPanel(dispPanel, inputImage, targetImage));
 			dispPanel.setInputFilePath(input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.display();

@@ -83,8 +83,7 @@ public class WorkspaceWindow extends JFrame {
 							// getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
 		setLayout(new BorderLayout());
 		setDisplayMode(DisplayMode.SideBySide);
-		setGraphicsPanel(new GraphicsPanel(this, getInputImage(), getTargetImage()));
-		add(getGraphicsPanel(), BorderLayout.CENTER);
+
 		setTopPanel(new JPanel());
 		getTopPanel().setSize(1000, 20);
 		getTopPanel().setLayout(new FlowLayout());
@@ -109,7 +108,7 @@ public class WorkspaceWindow extends JFrame {
 
 		addListener(topPanel);
 		addListener(getColorPanel());
-		addListener(getGraphicsPanel());
+
 
 	}
 
@@ -132,6 +131,8 @@ public class WorkspaceWindow extends JFrame {
 
 	public WorkspaceWindow setGraphicsPanel(GraphicsPanel graphicsPanel) {
 		this.graphicsPanel = graphicsPanel;
+		add(getGraphicsPanel(), BorderLayout.CENTER);
+		addListener(getGraphicsPanel());
 		return this;
 	}
 
