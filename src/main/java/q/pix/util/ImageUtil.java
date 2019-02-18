@@ -108,33 +108,6 @@ public class ImageUtil {
 		combineImages(dir, Optional.empty(),true, FileUtil.inputToTestsetOutputDir(dir));
 	}
 	
-	/*
-	public static void makeTrainSet(String dir) throws IOException {
-		List<String> contents = Arrays.asList(new File(dir).list());
-		if(!contents.contains(FileUtil.INPUT_DIR) || !contents.contains(FileUtil.TARGET_DIR)) {
-			throw new IllegalArgumentException("Directory must contain input and target subdirectories");
-		}
-		String outDir = dir+File.separator+FileUtil.TRAIN_DIR; 
-		new File(outDir).mkdir();
-		
-		List<File> inputs = Arrays.asList(new File(dir+File.separator+FileUtil.INPUT_DIR).listFiles());
-//		List<String> targets = Arrays.asList(new File(dir+File.separator+"target").list());
-//		if(inputs.size() != targets.size()) {
-//			// TODO: Notify the user of a mismatch on the counts but proceed anyway
-//		}
-		for(File input : inputs) {
-			File target = new File(input.getAbsolutePath().replace(FileUtil.INPUT_DIR, FileUtil.TARGET_DIR));
-			if(!target.exists()) {
-				continue;
-			}
-			BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
-			output.getGraphics().drawImage(ImageIO.read(target), 0, 0, null);
-			output.getGraphics().drawImage(ImageIO.read(new File(input.getAbsolutePath())), IMAGE_SIZE, 0, null);
-
-			ImageIO.write(output, "png", new File(input.getAbsolutePath().replace(FileUtil.INPUT_DIR, FileUtil.TRAIN_DIR)));
-		}
-	}
-	*/
 	private static BufferedImage loadOptional(Optional<String> path) throws IOException {
 		if(!path.isPresent() || !new File(path.get()).exists()) {
 			return blankImage();
