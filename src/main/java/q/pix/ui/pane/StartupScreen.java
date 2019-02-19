@@ -128,13 +128,13 @@ public class StartupScreen extends JFrame {
 	private void loadFiles(File selectedFile) {
 		try {
 			BufferedImage inputImage, targetImage;
-			File input = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
+			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
 			if (input.exists()) {
 				inputImage = ImageUtil.loadAndScale(input);
 			} else {
 				inputImage = ImageUtil.blankImage();
 			}
-			File target = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
+			File target = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
 			if (target.exists()) {
 				targetImage = ImageUtil.loadAndScale(target);
 			}	else {
@@ -142,8 +142,9 @@ public class StartupScreen extends JFrame {
 			}
 			WorkspaceWindow dispPanel = new WorkspaceWindow();
 			dispPanel.setGraphicsPanel(new PaintingPanel(dispPanel, inputImage, targetImage));
-			dispPanel.setInputFilePath(input.getAbsolutePath());
+			dispPanel.setInputFilePath(dispPanel.getGraphicsPanel().getInputImage(), input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+			dispPanel.setBackgroundColor(targetImage);
 			dispPanel.display();
 			setVisible(false);
 		} catch (Exception e) {

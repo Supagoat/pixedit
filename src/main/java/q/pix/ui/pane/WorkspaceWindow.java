@@ -19,14 +19,13 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import q.pix.ui.button.DisplayModeButton;
+import q.pix.util.ImageUtil;
 
 public class WorkspaceWindow extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	private GraphicsPanel graphicsPanel;
 	private DisplayMode displayMode;
-	private BufferedImage inputImage;
-	private BufferedImage targetImage;
 	public static final int IMAGE_SIZE = 256;
 
 	private JButton zoomInButton;
@@ -34,7 +33,7 @@ public class WorkspaceWindow extends JFrame {
 	private JButton penIncreaseButton;
 	private JButton penDecreaseButton;
 	private JButton saveButton;
-	private int backgroundColor;
+	private Optional<Integer> backgroundColor = Optional.empty();
 	private boolean drawOutsideLines;
 	
 	private JButton activeColor;
@@ -83,7 +82,6 @@ public class WorkspaceWindow extends JFrame {
 							// getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
 		setLayout(new BorderLayout());
 		setDisplayMode(DisplayMode.SideBySide);
-
 		setTopPanel(new JPanel());
 		getTopPanel().setSize(1000, 20);
 		getTopPanel().setLayout(new FlowLayout());
@@ -117,8 +115,8 @@ public class WorkspaceWindow extends JFrame {
 		component.setFocusable(true);
 	}
 
-	public void setInputFilePath(String path) {
-		topPanel.add(makeSaveButton(path));
+	public void setInputFilePath(BufferedImage input, String path) {
+		topPanel.add(makeSaveButton(input, path));
 	}
 	
 	public void display() {
@@ -136,29 +134,13 @@ public class WorkspaceWindow extends JFrame {
 		return this;
 	}
 
-	public BufferedImage getInputImage() {
-		return inputImage;
-	}
-
-	public WorkspaceWindow setInputImage(BufferedImage inputImage) {
-		this.inputImage = inputImage;
-		getGraphicsPanel().setInputImage(inputImage);
-		return this;
-	}
-
-	public BufferedImage getTargetImage() {
-		return targetImage;
-	}
-
-	public WorkspaceWindow setTargetImage(BufferedImage targetImage) {
-		this.targetImage = targetImage;
-		getGraphicsPanel().setTargetImage(targetImage);
-		if(deriveBackgroundColor(targetImage).isPresent()) {
-			setBackgroundColor(deriveBackgroundColor(targetImage).get());
-			getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor())));
-		} else {
-			System.out.println("Could not derive background color");
-		}
+	public WorkspaceWindow setBackgroundColor(BufferedImage targetImage) {
+//		if(ImageUtil.deriveBackgroundColor(targetImage).isPresent()) {
+//			setBackgroundColor(ImageUtil.deriveBackgroundColor(targetImage).get());
+//			getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
+//		} else {
+//			System.out.println("Could not derive background color");
+//		}
 		return this;
 	}
 
@@ -171,15 +153,6 @@ public class WorkspaceWindow extends JFrame {
 		return this;
 	}
 	
-	public Optional<Integer> deriveBackgroundColor(BufferedImage image) {
-		int ul = image.getRGB(0, 0);
-		if(ul == image.getRGB(image.getWidth()-1, image.getHeight()-1) &&
-				ul == image.getRGB(0, image.getHeight()-1) &&
-				ul == image.getRGB(image.getWidth()-1, 0)) {
-			return Optional.of(ul);
-		}
-		return Optional.empty();
-	}
 
 	private JButton makeZoomButton(String label, int changeBy) {
 		JButton zoomInButton = new JButton(label);
@@ -263,13 +236,13 @@ public class WorkspaceWindow extends JFrame {
 	}
 
 
-	private JButton makeSaveButton(String inputFilePath) {
+	private JButton makeSaveButton(BufferedImage inputImage, String inputFilePath) {
 		JButton saveButton = new JButton("Save");
 		saveButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					ImageIO.write(getInputImage(), "png", new File(inputFilePath));
+					ImageIO.write(inputImage, "png", new File(inputFilePath));
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -315,12 +288,12 @@ public class WorkspaceWindow extends JFrame {
 		return penDecreaseButton;
 	}
 
-	public int getBackgroundColor() {
+	public Optional<Integer> getBackgroundColor() {
 		return backgroundColor;
 	}
 
 	public WorkspaceWindow setBackgroundColor(int backgroundColor) {
-		this.backgroundColor = backgroundColor;
+		this.backgroundColor = Optional.of(backgroundColor);
 		return this;
 	}
 

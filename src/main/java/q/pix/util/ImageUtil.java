@@ -42,7 +42,7 @@ public class ImageUtil {
 	}
 	
 	public static BufferedImage blankImage() {
-		BufferedImage output = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+		BufferedImage output = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_ARGB);
 
 		int background = Color.WHITE.getRGB();
 		for(int x=0;x<output.getWidth();x++) {
@@ -113,5 +113,15 @@ public class ImageUtil {
 			return blankImage();
 		}
 		return ImageIO.read(new File(path.get()));
+	}
+	
+	public static Optional<Integer> deriveBackgroundColor(BufferedImage image) {
+		int ul = image.getRGB(0, 0);
+		if(ul == image.getRGB(image.getWidth()-1, image.getHeight()-1) &&
+				ul == image.getRGB(0, image.getHeight()-1) &&
+				ul == image.getRGB(image.getWidth()-1, 0)) {
+			return Optional.of(ul);
+		}
+		return Optional.empty();
 	}
 }
