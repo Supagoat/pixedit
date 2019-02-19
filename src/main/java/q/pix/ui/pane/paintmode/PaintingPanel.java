@@ -51,15 +51,16 @@ public class PaintingPanel extends GraphicsPanel {
 		repaint();
 		Graphics2D g2 = (Graphics2D) getGraphics();
 		g2.setColor(Color.blue);
-		g2.drawOval(e.getX(), e.getY(), 2, 2);
+		g2.drawOval(e.getX(), e.getY(), 8, 8);
 		// TODO: make the overlay draw happen when needed... Figure out when the image
 		// isn't actualy displayed... drawOverlay(g2);
 	}
 
 	@Override
 	public void onGraphicsWindowClick(MouseEvent e) {
-		if (!getWorkspaceWindow().getBackgroundColor().isPresent()) {
+		if (e.getButton() != MouseEvent.NOBUTTON && !getWorkspaceWindow().getBackgroundColor().isPresent()) {
 			getWorkspaceWindow().setBackgroundColor(getTargetImage().getRGB(e.getX() / getZoomLevel()+ getxView(), e.getY() / getZoomLevel()+ getyView()));
+			return;
 		} else if (getPressedButtons()[0]) {
 			paintPixels(e.getX(), e.getY());
 		}
@@ -70,6 +71,8 @@ public class PaintingPanel extends GraphicsPanel {
 	public void mouseEvent(MouseEvent e) {
 		if (!getWorkspaceWindow().getBackgroundColor().isPresent()) {
 			overlayBackgroundSelect(e);
+			onGraphicsWindowClick(e);
+			return;
 		} else {
 			overlayPaintbrush(e);
 		}

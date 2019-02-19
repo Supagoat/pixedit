@@ -19,7 +19,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import q.pix.ui.button.DisplayModeButton;
-import q.pix.util.ImageUtil;
 
 public class WorkspaceWindow extends JFrame {
 
