@@ -124,4 +124,15 @@ public class ImageUtil {
 		}
 		return Optional.empty();
 	}
+	
+	
+	public static double colorDiff(int rgb1, int rgb2) {
+		double rd = getRed(rgb2)-getRed(rgb1);
+		rd = rd*rd;
+		double gd = getGreen(rgb2)-getGreen(rgb1);
+		gd = gd*gd;
+		double bd = getBlue(rgb2)-getBlue(rgb1);
+		bd = bd*bd;
+		return Math.sqrt(rd+gd+bd);
+	}
 }

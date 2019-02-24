@@ -75,7 +75,7 @@ public class StartupScreen extends JFrame {
 	}
 	
 	private JButton generateButton() {
-		generateButton = new JButton("Generate");
+		generateButton = new JButton("Generate Inputs");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {

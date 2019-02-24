@@ -293,6 +293,7 @@ public class WorkspaceWindow extends JFrame {
 
 	public WorkspaceWindow setBackgroundColor(int backgroundColor) {
 		this.backgroundColor = Optional.of(backgroundColor);
+		getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
 		return this;
 	}
 

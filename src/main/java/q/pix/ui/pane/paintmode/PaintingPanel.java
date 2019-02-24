@@ -4,13 +4,15 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.time.Duration;
 
 import q.pix.ui.pane.GraphicsPanel;
 import q.pix.ui.pane.WorkspaceWindow;
 
 public class PaintingPanel extends GraphicsPanel {
 	private static final long serialVersionUID = 1L;
-
+	private long bgSelectTime = Long.MAX_VALUE;
+	
 	public PaintingPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		super(workspaceWindow, inputImage, targetImage);
 		addMouseListener(this);
@@ -37,7 +39,7 @@ public class PaintingPanel extends GraphicsPanel {
 			}
 		}
 	}
-	
+
 	public void overlayPaintbrush(MouseEvent e) {
 		repaint();
 		Graphics2D g2 = (Graphics2D) getGraphics();
@@ -58,10 +60,7 @@ public class PaintingPanel extends GraphicsPanel {
 
 	@Override
 	public void onGraphicsWindowClick(MouseEvent e) {
-		if (e.getButton() != MouseEvent.NOBUTTON && !getWorkspaceWindow().getBackgroundColor().isPresent()) {
-			getWorkspaceWindow().setBackgroundColor(getTargetImage().getRGB(e.getX() / getZoomLevel()+ getxView(), e.getY() / getZoomLevel()+ getyView()));
-			return;
-		} else if (getPressedButtons()[0]) {
+		if (getPressedButtons()[0]) {
 			paintPixels(e.getX(), e.getY());
 		}
 		super.onGraphicsWindowClick(e);
@@ -71,12 +70,28 @@ public class PaintingPanel extends GraphicsPanel {
 	public void mouseEvent(MouseEvent e) {
 		if (!getWorkspaceWindow().getBackgroundColor().isPresent()) {
 			overlayBackgroundSelect(e);
-			onGraphicsWindowClick(e);
+			if (e.getButton() != MouseEvent.NOBUTTON && !getWorkspaceWindow().getBackgroundColor().isPresent()) {
+				getWorkspaceWindow().setBackgroundColor(getTargetImage().getRGB(e.getX() / getZoomLevel() + getxView(),
+						e.getY() / getZoomLevel() + getyView()));
+				setBgSelectTime(System.currentTimeMillis());
+			}
 			return;
 		} else {
 			overlayPaintbrush(e);
 		}
-		super.mouseEvent(e);
+		// 2 second delay before it'll listen to other inputs otherwise it just starts painting
+		if(System.currentTimeMillis()-getBgSelectTime() > 2000) {
+			super.mouseEvent(e);
+		}
+	}
+
+	protected long getBgSelectTime() {
+		return bgSelectTime;
+	}
+
+	protected PaintingPanel setBgSelectTime(long bgSelectTime) {
+		this.bgSelectTime = bgSelectTime;
+		return this;
 	}
 
 }
