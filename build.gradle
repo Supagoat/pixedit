@@ -35,7 +35,8 @@ repositories {
     jcenter()
 }
 
-task copyToLib(type: Copy) {
-  into "lib"
-  from configurations.runtime
+  task copyToLib(type: Copy) {
+    into "$buildDir/lib"
+    from configurations.runtime
 }
+  build.dependsOn(copyToLib)
