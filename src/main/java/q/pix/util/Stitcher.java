@@ -37,8 +37,8 @@ public class Stitcher {
 		BufferedImage img = new BufferedImage(width,height, BufferedImage.TYPE_INT_RGB);
 		for(File f : fSet) {
 			BufferedImage inputImage = ImageIO.read(f);
-			int xOff = Integer.parseInt(f.getName().split("_")[1]);
-			int yOff = Integer.parseInt(f.getName().split("_")[2]);
+			int yOff = Integer.parseInt(f.getName().split("_")[1]);
+			int xOff = Integer.parseInt(f.getName().split("_")[2]);
 			System.out.println("Putting "+f.getName()+" at "+xOff+","+yOff);
 			img.getGraphics().drawImage(inputImage, xOff, yOff, inputImage.getWidth()+xOff, inputImage.getHeight()+yOff, 
 					0,0, inputImage.getWidth(), inputImage.getHeight(), null);
