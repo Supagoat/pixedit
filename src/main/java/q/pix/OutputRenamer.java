@@ -2,12 +2,14 @@ package q.pix;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class OutputRenamer {
 
 	public static void main(String[] args) throws Exception {
-		List<File> files = Arrays.asList(new File("D:\\art\\p2p\\roto1make\\roto1make\\forAnimation").listFiles());
+		List<File> files = Arrays.asList(new File(args[0]).listFiles());
+		Collections.sort(files);
 		int counter = 1;
 		for (File f : files) {
 //			if(f.getName().contains("input")) {
