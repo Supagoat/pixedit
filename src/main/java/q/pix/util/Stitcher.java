@@ -33,6 +33,7 @@ public class Stitcher {
 	}
 	
 	public static void combineImage(int width, int height, String outputName, List<File> fSet, String outputDir) throws IOException {
+		System.out.println("Processing "+outputName);
 		BufferedImage img = new BufferedImage(width,height, BufferedImage.TYPE_INT_RGB);
 		for(File f : fSet) {
 			BufferedImage inputImage = ImageIO.read(f);
