@@ -34,3 +34,8 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
+
+task copyToLib(type: Copy) {
+  into "lib"
+  from configurations.testRuntime
+}
