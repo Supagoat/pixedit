@@ -42,7 +42,11 @@ public class ImageUtil {
 	}
 	
 	public static BufferedImage blankImage() {
-		BufferedImage output = new BufferedImage(IMAGE_SIZE, IMAGE_SIZE, BufferedImage.TYPE_INT_ARGB);
+		return blankImage(IMAGE_SIZE, IMAGE_SIZE);
+	}
+	
+	public static BufferedImage blankImage(int width, int height) {
+		BufferedImage output = new BufferedImage(width,height, BufferedImage.TYPE_INT_ARGB);
 
 		int background = Color.WHITE.getRGB();
 		for(int x=0;x<output.getWidth();x++) {
@@ -83,16 +87,33 @@ public class ImageUtil {
 					continue;
 				}
 			}
-			BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+			BufferedImage inputImage = ImageIO.read(input);
+			BufferedImage targetImage = null;
 			if(target != null && target.exists()) {
-				output.getGraphics().drawImage(ImageIO.read(target), 0, 0, null);
+				targetImage = ImageIO.read(target);
 			} else {
-				output.getGraphics().drawImage(blankImage(), 0, 0, null);
+				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight());
 			}
-			output.getGraphics().drawImage(ImageIO.read(input), IMAGE_SIZE, 0, null);
-
-			ImageIO.write(output, "png", new File(outputDir+File.separator+input.getName()));
+			combineImage(targetImage, inputImage, outputDir, input.getName());
 		}
+	}
+	
+	public static void combineImage(BufferedImage leftImage, BufferedImage rightImage, String outputDir, String outputNameBase) throws IOException {
+		
+		int cols = leftImage.getWidth() > IMAGE_SIZE ? leftImage.getWidth()/(IMAGE_SIZE/2) : 1;
+		int rows = leftImage.getHeight() > IMAGE_SIZE ? leftImage.getHeight()/(IMAGE_SIZE/2) : 1;
+		
+		for(int c = 0;c < cols; c++) {
+			for(int r = 0;r < rows; r++) {
+				BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
+				output.getGraphics().drawImage(leftImage, 0, 0, IMAGE_SIZE, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
+				output.getGraphics().drawImage(rightImage, IMAGE_SIZE, 0, IMAGE_SIZE*2, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
+				String namePrefix = (c == 1 && r == 1) ? "" : "_"+r*IMAGE_SIZE/2+"_"+c*IMAGE_SIZE/2+"_";
+				ImageIO.write(output, "png", new File(outputDir+File.separator+namePrefix+outputNameBase));
+			}
+		}
+		
+
 	}
 	
 	public static void makeTrainSet(String dir) throws IOException {
