@@ -39,11 +39,12 @@ public class Stitcher {
 			BufferedImage inputImage = ImageIO.read(f);
 			int xOff = Integer.parseInt(f.getName().split("_")[1]);
 			int yOff = Integer.parseInt(f.getName().split("_")[2]);
+			System.out.println("Putting "+f.getName()+" at "+xOff+","+yOff);
 			img.getGraphics().drawImage(inputImage, xOff, yOff, inputImage.getWidth()+xOff, inputImage.getHeight()+yOff, 
 					0,0, inputImage.getWidth(), inputImage.getHeight(), null);
 		}
 		if(!new File(outputDir+File.separator+outputName).exists()) {
-			ImageIO.write(img, "png", new File(outputDir+File.separator+outputName));
+		//	ImageIO.write(img, "png", new File(outputDir+File.separator+outputName));
 		}
 	}
 	
@@ -62,7 +63,6 @@ public class Stitcher {
 				imgFiles = new ArrayList<>(100);
 				fileMap.put(imgName, imgFiles);
 			}
-			System.out.println(f.getName()+" is going into "+imgName);
 			imgFiles.add(f);
 		}
 		return fileMap;
