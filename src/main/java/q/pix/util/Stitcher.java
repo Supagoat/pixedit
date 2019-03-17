@@ -62,6 +62,7 @@ public class Stitcher {
 				imgFiles = new ArrayList<>(100);
 				fileMap.put(imgName, imgFiles);
 			}
+			System.out.println(f.getName()+" is going into "+imgName);
 			imgFiles.add(f);
 		}
 		return fileMap;
