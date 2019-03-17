@@ -20,7 +20,7 @@ public class Stitcher {
 		int height = Integer.parseInt(args[1]);
 		String inputDir = args[2];
 		String outputDir = args[3];
-		String filter = args.length == 4 ? "*" : args[1];
+		String filter = args.length == 4 ? "*" : args[4];
 		
 		new File(outputDir).mkdirs();
 		
