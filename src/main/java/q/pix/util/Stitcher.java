@@ -39,7 +39,7 @@ public class Stitcher {
 			BufferedImage inputImage = ImageIO.read(f);
 			int xOff = Integer.parseInt(f.getName().split("_")[1]);
 			int yOff = Integer.parseInt(f.getName().split("_")[2]);
-			System.out.println(xOff+","+yOff+" gpomg to "+inputImage.getWidth()+xOff+","+inputImage.getHeight()+yOff);
+			System.out.println(xOff+","+yOff+" gpomg to "+(inputImage.getWidth()+xOff)+","+(inputImage.getHeight()+yOff));
 			img.getGraphics().drawImage(inputImage, xOff, yOff, inputImage.getWidth()+xOff, inputImage.getHeight()+yOff, 
 					0,0, inputImage.getWidth(), inputImage.getHeight(), null);
 		}
