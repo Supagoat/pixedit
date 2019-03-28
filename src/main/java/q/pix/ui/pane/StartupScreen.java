@@ -64,9 +64,12 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					try {
+						makeSetButton.setText("Generating....");
 						ImageUtil.makeTrainSet(fc.getSelectedFile().getAbsolutePath());
+						makeSetButton.setText("Trainset");
 					} catch(Exception ex) {
 						// TODO: Get alert modals done
+						makeSetButton.setText("ERROR: "+ex.toString());
 					}
 				}
 			}
@@ -85,10 +88,13 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					try {
+						generateButton.setText("Generating....");
 						ImageUtil.makeGenerationInputs(fc.getSelectedFile().getAbsolutePath());
+						generateButton.setText("Generate Inputs");
 					} catch(Exception ex) {
 						// TODO: Get alert modals done
-					}
+						generateButton.setText("ERROR: "+ex.toString());
+					} 
 				}
 			}
 		});

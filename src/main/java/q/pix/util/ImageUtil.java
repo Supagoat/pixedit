@@ -108,7 +108,7 @@ public class ImageUtil {
 				BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
 				output.getGraphics().drawImage(leftImage, 0, 0, IMAGE_SIZE, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
 				output.getGraphics().drawImage(rightImage, IMAGE_SIZE, 0, IMAGE_SIZE*2, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
-				String namePrefix = (c == 1 && r == 1) ? "" : "_"+c*IMAGE_SIZE/2+"_"+r*IMAGE_SIZE/2+"_";
+				String namePrefix = (cols == 1 && rows == 1) ? "" : "_"+c*IMAGE_SIZE/2+"_"+r*IMAGE_SIZE/2+"_";
 				ImageIO.write(output, "png", new File(outputDir+File.separator+namePrefix+outputNameBase));
 			}
 		}
