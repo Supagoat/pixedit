@@ -71,7 +71,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			g2.drawImage(scaleTarget(), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleInput(), ImageUtil.IMAGE_SIZE * getZoomLevel(), 0, null);
+			g2.drawImage(scaleInput(), ImageUtil.IMAGE_WIDTH * getZoomLevel(), 0, null);
 		}
 	}
 	

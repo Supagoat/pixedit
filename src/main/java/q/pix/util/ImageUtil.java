@@ -13,7 +13,8 @@ import javax.imageio.ImageIO;
 import org.imgscalr.Scalr;
 
 public class ImageUtil {
-	public static final int IMAGE_SIZE = 256;
+	public static final int IMAGE_WIDTH = 256;
+	public static final int IMAGE_HEIGHT = 256;
 	
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
@@ -26,15 +27,15 @@ public class ImageUtil {
 	public static BufferedImage downscale(BufferedImage input) {
 		BufferedImage scaled = input;
 
-		if (scaled.getWidth() > IMAGE_SIZE || scaled.getHeight() > IMAGE_SIZE) {
-			scaled = Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, IMAGE_SIZE,
-					IMAGE_SIZE);
+		if (scaled.getWidth() > IMAGE_WIDTH || scaled.getHeight() > IMAGE_HEIGHT) {
+			scaled = Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, IMAGE_WIDTH,
+					IMAGE_HEIGHT);
 		}
 		BufferedImage output = blankImage();
 		
 		for(int x=0;x<scaled.getWidth();x++) {
 			for(int y=0;y<scaled.getHeight();y++) {
-				output.setRGB(calcOffset(scaled.getWidth())+x, calcOffset(scaled.getHeight())+y, scaled.getRGB(x, y));
+				output.setRGB(calcOffsetWidth(scaled.getWidth())+x, calcOffsetHeight(scaled.getHeight())+y, scaled.getRGB(x, y));
 			}
 		}
 		
@@ -42,7 +43,7 @@ public class ImageUtil {
 	}
 	
 	public static BufferedImage blankImage() {
-		return blankImage(IMAGE_SIZE, IMAGE_SIZE);
+		return blankImage(IMAGE_WIDTH, IMAGE_HEIGHT);
 	}
 	
 	public static BufferedImage blankImage(int width, int height) {
@@ -57,8 +58,12 @@ public class ImageUtil {
 		return output;
 	}
 
-	public static int calcOffset(int size) {
-		return (IMAGE_SIZE - size) / 2;
+	public static int calcOffsetWidth(int size) {
+		return (IMAGE_WIDTH - size) / 2;
+	}
+	
+	public static int calcOffsetHeight(int size) {
+		return (IMAGE_HEIGHT - size) / 2;
 	}
 
 	public static int getRed(int rgb) {
@@ -100,15 +105,15 @@ public class ImageUtil {
 	
 	public static void combineImage(BufferedImage leftImage, BufferedImage rightImage, String outputDir, String outputNameBase) throws IOException {
 		
-		int cols = leftImage.getWidth() > IMAGE_SIZE ? leftImage.getWidth()/(IMAGE_SIZE/2) : 1;
-		int rows = leftImage.getHeight() > IMAGE_SIZE ? leftImage.getHeight()/(IMAGE_SIZE/2) : 1;
+		int cols = leftImage.getWidth() > IMAGE_WIDTH ? leftImage.getWidth()/(IMAGE_WIDTH/2) : 1;
+		int rows = leftImage.getHeight() > IMAGE_HEIGHT ? leftImage.getHeight()/(IMAGE_HEIGHT/2) : 1;
 		
 		for(int c = 0;c < cols; c++) {
 			for(int r = 0;r < rows; r++) {
-				BufferedImage output = new BufferedImage(IMAGE_SIZE*2, IMAGE_SIZE, BufferedImage.TYPE_INT_RGB);
-				output.getGraphics().drawImage(leftImage, 0, 0, IMAGE_SIZE, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
-				output.getGraphics().drawImage(rightImage, IMAGE_SIZE, 0, IMAGE_SIZE*2, IMAGE_SIZE, c*IMAGE_SIZE/2, r*IMAGE_SIZE/2, c*IMAGE_SIZE/2+IMAGE_SIZE, r*IMAGE_SIZE/2+IMAGE_SIZE, null);
-				String namePrefix = (cols == 1 && rows == 1) ? "" : "_"+c*IMAGE_SIZE/2+"_"+r*IMAGE_SIZE/2+"_";
+				BufferedImage output = new BufferedImage(IMAGE_WIDTH*2, IMAGE_HEIGHT, BufferedImage.TYPE_INT_RGB);
+				output.getGraphics().drawImage(leftImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, c*IMAGE_WIDTH/2, r*IMAGE_HEIGHT/2, c*IMAGE_WIDTH/2+IMAGE_WIDTH, r*IMAGE_HEIGHT/2+IMAGE_HEIGHT, null);
+				output.getGraphics().drawImage(rightImage, IMAGE_WIDTH, 0, IMAGE_WIDTH*2, IMAGE_HEIGHT, c*IMAGE_WIDTH/2, r*IMAGE_HEIGHT/2, c*IMAGE_WIDTH/2+IMAGE_WIDTH, r*IMAGE_HEIGHT/2+IMAGE_HEIGHT, null);
+				String namePrefix = (cols == 1 && rows == 1) ? "" : "_"+c*IMAGE_WIDTH/2+"_"+r*IMAGE_HEIGHT/2+"_";
 				ImageIO.write(output, "png", new File(outputDir+File.separator+namePrefix+outputNameBase));
 			}
 		}
