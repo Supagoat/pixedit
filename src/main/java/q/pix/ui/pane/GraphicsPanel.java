@@ -33,6 +33,8 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private int xView, yView;
 	private boolean[] pressedButtons;
 	private ThreadPoolExecutor threadEx;
+	
+	private boolean inBackgroundSelectionMode = false;
 
 	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
@@ -69,14 +71,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			g2.drawImage(scaleTarget(), 0, 0, null);
 		}
 		if (getInputImage() != null) {
-			g2.drawImage(scaleInput(), ImageUtil.IMAGE_SIZE * getZoomLevel(), 0, null);
+			g2.drawImage(scaleInput(), ImageUtil.IMAGE_WIDTH * getZoomLevel(), 0, null);
 		}
 	}
-
-	public String a() {
-		return "A";
-	}
-
+	
 	/**
 	 * Creates an image out of a sub-section of another image
 	 * 

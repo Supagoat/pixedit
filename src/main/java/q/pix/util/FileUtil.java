@@ -9,12 +9,12 @@ public class FileUtil {
 	public static final String TRAIN_DIR = "trainset";
 	public static final String TEST_DIR = "testset";
 	
-	public static String toTargetDir(String dir) {
+	public static String toInputDir(String dir) {
 		return dir.replace(File.separator + TARGET_DIR + File.separator,
 				File.separator + INPUT_DIR + File.separator);
 	}
 	
-	public static String toInputDir(String dir) {
+	public static String toTargetDir(String dir) {
 		return dir.replace(File.separator + INPUT_DIR + File.separator,
 		File.separator + TARGET_DIR + File.separator);
 	}

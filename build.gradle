@@ -34,3 +34,9 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
+
+  task copyToLib(type: Copy) {
+    into "$buildDir/libs"
+    from configurations.runtime
+}
+  build.dependsOn(copyToLib)

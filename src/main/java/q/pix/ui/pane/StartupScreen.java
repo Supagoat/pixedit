@@ -64,9 +64,12 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					try {
+						makeSetButton.setText("Generating....");
 						ImageUtil.makeTrainSet(fc.getSelectedFile().getAbsolutePath());
+						makeSetButton.setText("Trainset");
 					} catch(Exception ex) {
 						// TODO: Get alert modals done
+						makeSetButton.setText("ERROR: "+ex.toString());
 					}
 				}
 			}
@@ -75,7 +78,7 @@ public class StartupScreen extends JFrame {
 	}
 	
 	private JButton generateButton() {
-		generateButton = new JButton("Generate");
+		generateButton = new JButton("Generate Inputs");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -85,10 +88,13 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					try {
+						generateButton.setText("Generating....");
 						ImageUtil.makeGenerationInputs(fc.getSelectedFile().getAbsolutePath());
+						generateButton.setText("Generate Inputs");
 					} catch(Exception ex) {
 						// TODO: Get alert modals done
-					}
+						generateButton.setText("ERROR: "+ex.toString());
+					} 
 				}
 			}
 		});
@@ -128,13 +134,13 @@ public class StartupScreen extends JFrame {
 	private void loadFiles(File selectedFile) {
 		try {
 			BufferedImage inputImage, targetImage;
-			File input = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
+			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
 			if (input.exists()) {
 				inputImage = ImageUtil.loadAndScale(input);
 			} else {
 				inputImage = ImageUtil.blankImage();
 			}
-			File target = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
+			File target = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
 			if (target.exists()) {
 				targetImage = ImageUtil.loadAndScale(target);
 			}	else {
@@ -142,8 +148,9 @@ public class StartupScreen extends JFrame {
 			}
 			WorkspaceWindow dispPanel = new WorkspaceWindow();
 			dispPanel.setGraphicsPanel(new PaintingPanel(dispPanel, inputImage, targetImage));
-			dispPanel.setInputFilePath(input.getAbsolutePath());
+			dispPanel.setInputFilePath(dispPanel.getGraphicsPanel().getInputImage(), input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+			dispPanel.setBackgroundColor(targetImage);
 			dispPanel.display();
 			setVisible(false);
 		} catch (Exception e) {
