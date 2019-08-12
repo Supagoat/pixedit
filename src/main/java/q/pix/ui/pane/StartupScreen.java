@@ -40,6 +40,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(toTrainSetButton());
 		getPanel().add(generateButton());
 		getPanel().add(loadButton());
+		getPanel().add(outlineButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -67,16 +68,16 @@ public class StartupScreen extends JFrame {
 						makeSetButton.setText("Generating....");
 						ImageUtil.makeTrainSet(fc.getSelectedFile().getAbsolutePath());
 						makeSetButton.setText("Trainset");
-					} catch(Exception ex) {
+					} catch (Exception ex) {
 						// TODO: Get alert modals done
-						makeSetButton.setText("ERROR: "+ex.toString());
+						makeSetButton.setText("ERROR: " + ex.toString());
 					}
 				}
 			}
 		});
 		return makeSetButton;
 	}
-	
+
 	private JButton generateButton() {
 		generateButton = new JButton("Generate Inputs");
 		generateButton.addActionListener(new ActionListener() {
@@ -91,10 +92,10 @@ public class StartupScreen extends JFrame {
 						generateButton.setText("Generating....");
 						ImageUtil.makeGenerationInputs(fc.getSelectedFile().getAbsolutePath());
 						generateButton.setText("Generate Inputs");
-					} catch(Exception ex) {
+					} catch (Exception ex) {
 						// TODO: Get alert modals done
-						generateButton.setText("ERROR: "+ex.toString());
-					} 
+						generateButton.setText("ERROR: " + ex.toString());
+					}
 				}
 			}
 		});
@@ -119,6 +120,28 @@ public class StartupScreen extends JFrame {
 		return loadButton;
 	}
 
+	private JButton outlineButton() {
+		loadButton = new JButton("Outline");
+		loadButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser fc = new JFileChooser();
+					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+					int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						ImageUtil.outlineFile(fc.getSelectedFile());
+					}
+				} catch (Exception ex) {
+					loadButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return loadButton;
+	}
+
 	private JButton quitButton() {
 		quitButton = new JButton("Exit");
 		quitButton.addActionListener(new ActionListener() {
@@ -130,7 +153,7 @@ public class StartupScreen extends JFrame {
 
 		return quitButton;
 	}
-	
+
 	private void loadFiles(File selectedFile) {
 		try {
 			BufferedImage inputImage, targetImage;
@@ -143,7 +166,7 @@ public class StartupScreen extends JFrame {
 			File target = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
 			if (target.exists()) {
 				targetImage = ImageUtil.loadAndScale(target);
-			}	else {
+			} else {
 				targetImage = ImageUtil.blankImage();
 			}
 			WorkspaceWindow dispPanel = new WorkspaceWindow();
@@ -157,7 +180,5 @@ public class StartupScreen extends JFrame {
 			throw new RuntimeException(e);
 		}
 	}
-	
-
 
 }
