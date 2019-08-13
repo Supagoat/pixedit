@@ -169,7 +169,7 @@ public class ImageUtil {
 		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(),
 				new Color(Color.WHITE.getRed(), Color.WHITE.getGreen(), Color.WHITE.getBlue(), 0));
 		Graphics2D g = (Graphics2D) out.createGraphics();
-		g.drawLine(100, 100, 500, 500);
+		// g.drawLine(100, 100, 500, 500);
 		AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f);
 		g.setComposite(composite);
 		for (int y = 1; y < out.getHeight() - 1; y++) {
@@ -194,7 +194,43 @@ public class ImageUtil {
 				}
 			}
 		}
-		ImageIO.write(out, "png", new File(inputFile.getAbsolutePath().replace(".png", "_outlined.png")));
+		String outFileName = inputFile.getAbsolutePath().replace(".png", "_outlined.png");
+		ImageIO.write(out, "png", new File(outFileName));
+		applyDoubleOutline(out, outFileName);
+	}
+
+	public static void applyDoubleOutline(BufferedImage in, String inName) throws IOException {
+
+		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(),
+				new Color(Color.WHITE.getRed(), Color.WHITE.getGreen(), Color.WHITE.getBlue(), 0));
+		Graphics2D g = (Graphics2D) out.createGraphics();
+		// g.drawLine(100, 100, 500, 500);
+		AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f);
+		g.setComposite(composite);
+		for (int y = 1; y < out.getHeight() - 1; y++) {
+			for (int x = 1; x < out.getWidth() - 1; x++) {
+				// System.out.println((in.getRGB(x, y) & 0xff000000));
+				if (in.getRGB(x, y) == Color.WHITE.getRGB()) {
+					boolean blackFound = false;
+					for (int yb = y - 1; yb < y + 2; yb++) {
+						for (int xb = x - 1; xb < x + 2; xb++) {
+							blackFound = blackFound || in.getRGB(xb, yb) == Color.BLACK.getRGB();
+						}
+					}
+					if (blackFound) {
+						out.setRGB(x, y, Color.BLACK.getRGB() | 0xff000000);
+					} else {
+						out.setRGB(x, y, Color.WHITE.getRGB());
+					}
+				} else if (in.getRGB(x, y) == Color.BLACK.getRGB()) {
+					out.setRGB(x, y, Color.BLACK.getRGB());
+				} else {
+					g.setColor(new Color(0, 0, 0, 0));
+					g.fillRect(x, y, 1, 1);
+				}
+			}
+		}
+		ImageIO.write(out, "png", new File(inName.replace("_outlined", "_doubleoutlined")));
 	}
 
 	public static double colorDiff(int rgb1, int rgb2) {
