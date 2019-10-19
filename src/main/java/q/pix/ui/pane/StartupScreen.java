@@ -1,6 +1,7 @@
 package q.pix.ui.pane;
 
 import java.awt.GridLayout;
+import java.awt.TextArea;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -41,6 +42,8 @@ public class StartupScreen extends JFrame {
 		getPanel().add(generateButton());
 		getPanel().add(loadButton());
 		getPanel().add(outlineButton());
+		getPanel().add(outlineDirButton());
+		getPanel().add(splitButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -70,7 +73,8 @@ public class StartupScreen extends JFrame {
 						makeSetButton.setText("Trainset");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
-						makeSetButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+						//makeSetButton.setText("ERROR: " + ex.toString());
 					}
 				}
 			}
@@ -94,7 +98,8 @@ public class StartupScreen extends JFrame {
 						generateButton.setText("Generate Inputs");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
-						generateButton.setText("ERROR: " + ex.toString());
+						//generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
 					}
 				}
 			}
@@ -134,12 +139,66 @@ public class StartupScreen extends JFrame {
 						ImageUtil.outlineFile(fc.getSelectedFile());
 					}
 				} catch (Exception ex) {
+					handleError(ex);
 					loadButton.setText("ERROR: " + ex.toString());
 				}
 			}
 		});
 
 		return loadButton;
+	}
+	
+	private JButton outlineDirButton() {
+		loadButton = new JButton("OutlineDir");
+		loadButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser fc = new JFileChooser();
+					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						ImageUtil.outlineFile(fc.getSelectedFile());
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					loadButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return loadButton;
+	}
+	
+	
+	private JButton splitButton() {
+		loadButton = new JButton("Split");
+		loadButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser fc = new JFileChooser();
+					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = fc.showOpenDialog(StartupScreen.this);
+					
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						ImageUtil.splitImages(fc.getSelectedFile());
+						loadButton.setText("DONE");
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					loadButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return loadButton;
+	}
+	
+	private void handleError(Exception e) {
+
+		getPanel().add(new TextArea(e.toString()));
 	}
 
 	private JButton quitButton() {
