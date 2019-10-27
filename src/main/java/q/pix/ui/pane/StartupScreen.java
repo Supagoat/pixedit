@@ -33,7 +33,7 @@ public class StartupScreen extends JFrame {
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
-		setSize(600, 150);
+		setSize(1000, 150);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
@@ -44,6 +44,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(outlineButton());
 		getPanel().add(outlineDirButton());
 		getPanel().add(splitButton());
+		getPanel().add(analyzeColorsButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -195,6 +196,30 @@ public class StartupScreen extends JFrame {
 
 		return loadButton;
 	}
+	
+	private JButton analyzeColorsButton() {
+		loadButton = new JButton("Analyze Colors");
+		loadButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser fc = new JFileChooser();
+					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+					int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						ImageUtil.analyzeColors(fc.getSelectedFile());
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					loadButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return loadButton;
+	}
+	
 	
 	private void handleError(Exception e) {
 

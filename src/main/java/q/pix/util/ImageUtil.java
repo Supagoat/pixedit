@@ -1,12 +1,11 @@
 package q.pix.util;
 
-import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -17,9 +16,12 @@ import javax.imageio.ImageIO;
 
 import org.imgscalr.Scalr;
 
+import external.ColorSimilarity;
+
 public class ImageUtil {
 	public static final int IMAGE_WIDTH = 256;
 	public static final int IMAGE_HEIGHT = 256;
+	public static final Color GREEN_BG = new Color(0, 255, 0);
 
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
@@ -203,15 +205,16 @@ public class ImageUtil {
 							BufferedImage subImage = in.getSubimage(upperLeftBound.x, upperLeftBound.y,
 									lowerRightBound.x - upperLeftBound.x, lowerRightBound.y - upperLeftBound.y);
 
-							String outFileName = inputFile.getName().substring(0, inputFile.getName().indexOf('.')).replaceAll(" ","_")
-									+ "split_" + imageCt + ".png";
-							
+							String outFileName = inputFile.getName().substring(0, inputFile.getName().indexOf('.'))
+									.replaceAll(" ", "_") + "split_" + imageCt + ".png";
+
 							if (subImage.getWidth() <= 128 && subImage.getHeight() <= 128) {
 								ImageIO.write(centerImageOnGreen(subImage, 128), "png",
 										new File(outputDir + "_small" + File.separator + outFileName));
 							} else if (subImage.getWidth() <= 256 && subImage.getHeight() <= 256) {
-								ImageIO.write(centerImageOnGreen(subImage, 256), "png", new File(outputDir + File.separator + outFileName));
-							} 
+								ImageIO.write(centerImageOnGreen(subImage, 256), "png",
+										new File(outputDir + File.separator + outFileName));
+							}
 							imageCt++;
 						}
 
@@ -223,35 +226,157 @@ public class ImageUtil {
 			e.printStackTrace();
 		}
 
-//		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(),
-//				new Color(Color.WHITE.getRed(), Color.WHITE.getGreen(), Color.WHITE.getBlue(), 0));
-//		Graphics2D g = (Graphics2D) out.createGraphics();
-//		AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f);
-//		g.setComposite(composite);
-//		for (int y = 1; y < out.getHeight() - 1; y++) {
-//			for (int x = 1; x < out.getWidth() - 1; x++) {
-//				if ((in.getRGB(x, y) & 0xff000000) != 0) {
-//					boolean transparencyFound = false;
-//					for (int yb = y - 1; yb < y + 2; yb++) {
-//						for (int xb = x - 1; xb < x + 2; xb++) {
-//							transparencyFound = transparencyFound || (in.getRGB(xb, yb) & 0xff000000) == 0;
-//						}
-//					}
-//					if (transparencyFound) {
-//						out.setRGB(x, y, background.getRGB());
-//					} else {
-//						out.setRGB(x, y, Color.WHITE.getRGB());
-//					}
-//				} else {
-//					g.setColor(new Color(0, 0, 0, 0));
-//					g.fillRect(x, y, 1, 1);
+	}
+
+	public static void analyzeColors(File inputFile) throws IOException {
+		BufferedImage analyzed = analyzeColors(ImageIO.read(inputFile));
+		ImageIO.write(analyzed, "png", new File(inputFile.getAbsolutePath().replace(".png", "_colors.png")));
+	}
+
+	public static BufferedImage analyzeColors(BufferedImage input) {
+		BufferedImage scaled = input;
+
+		Set<Color> colorsFound = new HashSet<>();
+		Set<SimilarColors> similars = new HashSet<>();
+		Set<Color> lonelies = new HashSet<>();
+
+		for (int x = 0; x < scaled.getWidth(); x++) {
+			for (int y = 0; y < scaled.getHeight(); y++) {
+				Color c = new Color(scaled.getRGB(x, y));
+				if (!colorsFound.contains(c)) {
+					colorsFound.add(c);
+				}
+			}
+		}
+		int size = ((int) Math.sqrt(colorsFound.size())) + 1;
+		BufferedImage output = blankImage(size, size, GREEN_BG);
+
+		for (Color c : colorsFound) {
+			SimilarColors sc = findMostSimilar(c, colorsFound, similars);
+			if (sc == null) {
+				lonelies.add(c);
+			} else {
+				similars.add(sc);
+			}
+		}
+		List<Set<Color>> families = new ArrayList<>();
+		for (SimilarColors sc : similars) {
+			if (!hasFamily(sc.getC1(), families)) {
+				Set<Color> family = makeFamily(sc.getC1(), similars);
+				family.addAll(makeFamily(sc.getC2(), similars));
+				families.add(family);
+			}
+
+		}
+
+
+		for (Set<Color> family : families) {
+			System.out.println("FAMILY");
+			for (Color c : family) {
+				System.out.println(c.getRed() + " " + c.getGreen() + " " + c.getBlue());
+			}
+		}
+
+		// below is the old way
+//		int cNum = 0;
+//		
+//		for(Color c : colorsFound) {
+//			int row = cNum/output.getHeight();
+//			int col = cNum%output.getWidth();
+//			output.setRGB(col,row,c.getRGB());
+//			cNum++;
+//			System.out.print(col+","+row+": ");
+//		}
+//		
+//		for(Color c : colorsFound) {
+//			System.out.println("--------------------------");
+//			for(int y=0;y<output.getHeight(); y++) {
+//				for(int x=0;x<output.getWidth();x++) {
+//					Color atCoord = new Color(output.getRGB(x, y));
+//					System.out.println(x+","+y+" "+sameColorFamily(c, atCoord)+" "+c.equals(atCoord));
 //				}
 //			}
 //		}
-//		String outFileName = inputFile.getAbsolutePath().replace(".png", "_outlined.png");
-		// ImageIO.write(out, "png", new File(outFileName));
+
+		return output;
 	}
 
+	public static boolean hasFamily(Color c, List<Set<Color>> families) {
+		for (Set<Color> family : families) {
+			if (family.contains(c)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static Set<Color> makeFamily(Color c, Set<SimilarColors> similars) {
+		Set<Color> family = new HashSet<>();
+		family.add(c);
+		addFamilyMembers(family, similars);
+		return family;
+	}
+
+	public static void addFamilyMembers(Set<Color> family, Set<SimilarColors> similars) {
+
+		boolean added = false;
+		List<Color> concurrency = new ArrayList<Color>(family);
+		for (Color fc : concurrency) {
+			for (SimilarColors sc : similars) {
+				if (sc.containsColor(fc)) {
+					added = family.add(sc.getC1());
+					added = added || family.add(sc.getC2());
+				}
+			}
+		}
+		if (added) {
+			// for(Color fc : family) {
+			addFamilyMembers(family, similars);
+			// }
+		}
+	}
+
+	public static SimilarColors findMostSimilar(Color lonelyColor, Set<Color> colors, Set<SimilarColors> foundMatches) {
+		SimilarColors bestMatch = null;
+		for (Color c : colors) {
+			if (!c.equals(lonelyColor)) {
+				SimilarColors sc = new SimilarColors(lonelyColor, c);
+				if (!foundMatches.contains(sc) && sc.getDiff() > 0 && sc.getDiff() < 40
+						&& (bestMatch == null || sc.getDiff() < bestMatch.getDiff())) {
+					bestMatch = sc;
+				}
+			}
+		}
+		if (bestMatch.getDiff() < 25) {
+			return bestMatch;
+		}
+		return null;
+	}
+
+	public static boolean sameColorFamily(Color c1, Color c2) {
+		double diff = getColorDiff(c1, c2);
+		return diff > 0.0 && diff < 1.0;
+	}
+
+	public static double getColorDiff(Color c1, Color c2) {
+//		CIE94 comparer = new CIE94();
+//		float[] lab1 = ColorConverter.RGBtoHSV(c1.getRed(),c1.getGreen(), c1.getBlue());
+//		float[] lab2 = ColorConverter.RGBtoHSV(c2.getRed(),c2.getGreen(), c2.getBlue());
+//		System.out.println(Math.abs(lab1[0]-lab2[0])+" "+Math.abs(lab1[1]-lab2[1])+" "+Math.abs(lab1[2]-lab2[2]));
+//		return Math.abs(lab1[1]-lab2[1]) < 20 && Math.abs(lab1[2]-lab2[2]) < 20;
+		double[] lab1 = ColorSimilarity.RGBA2LAB(c1.getRed(), c1.getGreen(), c1.getBlue(), 1.0);
+		double[] lab2 = ColorSimilarity.RGBA2LAB(c2.getRed(), c2.getGreen(), c2.getBlue(), 1.0);
+		double similarity = ColorSimilarity.DeltaE00(lab1[0], lab1[1], lab1[2], lab2[0], lab2[1], lab2[2]);
+		return similarity;
+	}
+
+//	float[] lab1 = ColorConverter.RGBtoLAB(c1.getRed(),c1.getGreen(), c1.getBlue(), ColorConverter.CIE10_D65);
+//	CIELab c1Lab  = new CIELab( lab1[0], lab1[1], lab1[2] );
+//	
+//	float[] lab2 = ColorConverter.RGBtoLAB(c2.getRed(),c2.getGreen(), c2.getBlue(), ColorConverter.CIE10_D65);
+//	CIELab c2Lab  = new CIELab( lab2[0], lab2[1], lab2[2] );
+	// ColorDifference diff = comparer.compute(c1Lab, c2Lab);
+	// return diff.getValue(ColorDifference.DELTA_L_s);
 	public static BufferedImage centerImageOnGreen(BufferedImage in, int size) {
 		Color background = new Color(0, 255, 0);
 		BufferedImage out = ImageUtil.blankImage(size, size, background);
@@ -260,15 +385,15 @@ public class ImageUtil {
 				out.setRGB(x, y, background.getRGB());
 			}
 		}
-		int offsetX = (size-in.getWidth())/2;
-		int offsetY = (size-in.getHeight())/2;
-		
+		int offsetX = (size - in.getWidth()) / 2;
+		int offsetY = (size - in.getHeight()) / 2;
+
 		for (int y = 0; y < in.getHeight(); y++) {
 			for (int x = 0; x < in.getWidth(); x++) {
-				if(!isTransparent(in.getRGB(x, y))) {
+				if (!isTransparent(in.getRGB(x, y))) {
 					try {
-					out.setRGB(x+offsetX, y+offsetY, in.getRGB(x, y));
-					} catch(Exception e) {
+						out.setRGB(x + offsetX, y + offsetY, in.getRGB(x, y));
+					} catch (Exception e) {
 						e.printStackTrace();
 					}
 				}
@@ -308,10 +433,6 @@ public class ImageUtil {
 	public static Set<Point> findTouchingNonTransparents(BufferedImage i, int baseX, int baseY) {
 		Set<Point> nonTransparents = new HashSet<>(1000);
 		Set<Point> checked = new HashSet<>(1000);
-//		int minX = i.getWidth();
-//		int minY = i.getHeight();
-//		int maxX = 0;
-//		int maxY = 0;
 		Set<Point> toCheck = new HashSet<>(100);
 
 		addPoints(toCheck, new Point(baseX, baseY), checked, i.getWidth(), i.getHeight());
@@ -353,63 +474,55 @@ public class ImageUtil {
 
 	public static void outlineFile(File inputFile) throws IOException {
 		try {
-		if(inputFile.isDirectory()) {
-			File outDir = new File(inputFile.getAbsoluteFile()+"_outlined");
-			outDir.mkdir();
-			File[] files = inputFile.listFiles();
-			for(int i=0;i<files.length;i++) {
-				File f = files[i];
-				if(f.getName().endsWith(".png")) {
-					outlineFile(f, outDir.getAbsolutePath());
+			if (inputFile.isDirectory()) {
+				File outDir = new File(inputFile.getAbsoluteFile() + "_outlined");
+				outDir.mkdir();
+				File[] files = inputFile.listFiles();
+				for (int i = 0; i < files.length; i++) {
+					File f = files[i];
+					if (f.getName().endsWith(".png")) {
+						outlineFile(f, outDir.getAbsolutePath());
+					}
 				}
+			} else {
+				outlineSingleFile(inputFile);
 			}
-		} else {
-			outlineSingleFile(inputFile);
-		}
-		} catch(Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static void outlineSingleFile(File inputFile) throws IOException {
 		String outFileName = inputFile.getAbsolutePath().replace(".png", "_outlined.png");
 		outlineFile(inputFile, outFileName);
 	}
-	
+
 	public static void outlineFile(File inputFile, String outFilePath) throws IOException {
 
 		BufferedImage in = ImageIO.read(inputFile);
-		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(),
-				Color.WHITE);
-		//Graphics2D g = (Graphics2D) out.createGraphics();
-		//AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f);
-		//g.setComposite(composite);
+		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(), Color.WHITE);
 		for (int y = 1; y < out.getHeight() - 1; y++) {
 			for (int x = 1; x < out.getWidth() - 1; x++) {
 				if ((in.getRGB(x, y) & 0xff000000) != 0 && !isBackgroundColor(in.getRGB(x, y))) {
 					boolean transparencyFound = false;
 					for (int yb = y - 1; yb < y + 2; yb++) {
 						for (int xb = x - 1; xb < x + 2; xb++) {
-							transparencyFound = isBackgroundColor(in.getRGB(xb, yb)) || transparencyFound || (in.getRGB(xb, yb) & 0xff000000) == 0;
+							transparencyFound = isBackgroundColor(in.getRGB(xb, yb)) || transparencyFound
+									|| (in.getRGB(xb, yb) & 0xff000000) == 0;
 						}
 					}
 					if (transparencyFound) {
 						out.setRGB(x, y, Color.BLACK.getRGB() | 0xff000000);
 					} else {
-						//no need for this out.setRGB(x, y, Color.WHITE.getRGB());
 					}
 				} else {
-				//	g.setColor(new Color(0, 0, 0, 0));
-				//	g.fillRect(x, y, 1, 1);
-					//out.setRGB(x, y, Color.RED.getRGB() | 0xff000000);
 				}
 			}
 		}
-		
-		//ImageIO.write(out, "png", new File(outFilePath));
+
 		applyDoubleOutline(out, inputFile.getName(), outFilePath);
 	}
-	
+
 	public static boolean isBackgroundColor(int rgb) {
 		Color c = new Color(rgb);
 		return (c.getRed() == 0 && c.getBlue() == 0 && c.getGreen() == 255);
@@ -417,13 +530,8 @@ public class ImageUtil {
 
 	public static void applyDoubleOutline(BufferedImage in, String inName, String outPath) throws IOException {
 		findBackgroundColor(in);
-		Color background = Color.WHITE;//new Color(0, 255, 0);
-		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(),
-				Color.WHITE);
-		//Graphics2D g = (Graphics2D) out.createGraphics();
-		// g.drawLine(100, 100, 500, 500);
-		//AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.CLEAR, 0.0f);
-		//g.setComposite(composite);
+		Color background = Color.WHITE;// new Color(0, 255, 0);
+		BufferedImage out = ImageUtil.blankImage(in.getWidth(), in.getHeight(), Color.WHITE);
 		for (int y = 1; y < out.getHeight() - 1; y++) {
 			for (int x = 1; x < out.getWidth() - 1; x++) {
 				if (in.getRGB(x, y) == background.getRGB()) {
@@ -434,24 +542,23 @@ public class ImageUtil {
 						}
 					}
 					if (blackFound) {
-						out.setRGB(x, y, Color.BLACK.getRGB());// | 0xff000000);
+						out.setRGB(x, y, Color.BLACK.getRGB());
 					} else {
 						out.setRGB(x, y, Color.WHITE.getRGB());
 					}
 				} else if (in.getRGB(x, y) == Color.BLACK.getRGB()) {
 					out.setRGB(x, y, Color.BLACK.getRGB());
 				} else {
-					//g.setColor(new Color(0, 0, 0, 0));
-					//g.fillRect(x, y, 1, 1);
-					//out.setRGB(x, y, Color.BLACK.getRGB());
+
 				}
 			}
 		}
-		ImageIO.write(out, "png", new File(outPath+File.separator+inName.replace("_outlined", "_doubleoutlined")));
+		ImageIO.write(out, "png", new File(outPath + File.separator + inName.replace("_outlined", "_doubleoutlined")));
 	}
 
 	public static int findBackgroundColor(BufferedImage img) {
-		if (img.getRGB(0, 0) != img.getRGB(0, img.getHeight() - 1) || img.getRGB(0, 0) != img.getRGB(img.getWidth()-1, 0)
+		if (img.getRGB(0, 0) != img.getRGB(0, img.getHeight() - 1)
+				|| img.getRGB(0, 0) != img.getRGB(img.getWidth() - 1, 0)
 				|| img.getRGB(0, 0) != img.getRGB(img.getWidth() - 1, img.getHeight() - 1)) {
 			System.out.println("This image does not have a detectable background: " + img.getRGB(0, 0) + " "
 					+ img.getRGB(img.getWidth() - 1, img.getHeight() - 1) + " " + img.getRGB(img.getWidth(), 0) + " "
