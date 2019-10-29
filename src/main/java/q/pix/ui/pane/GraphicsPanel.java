@@ -19,7 +19,7 @@ import q.pix.util.ImageUtil;
 
 public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionListener {
 	private static final long serialVersionUID = 1L;
-	private WorkspaceWindow workspaceWindow;
+	private WorkspacePaintWindow workspaceWindow;
 	private int zoomLevel = 1;
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
@@ -36,7 +36,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	
 	private boolean inBackgroundSelectionMode = false;
 
-	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+	public GraphicsPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		setWorkspaceWindow(workspaceWindow);
 		setInputImage(inputImage);
 		setTargetImage(targetImage);
@@ -163,11 +163,11 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		return scaled;
 	}
 
-	public WorkspaceWindow getWorkspaceWindow() {
+	public WorkspacePaintWindow getWorkspaceWindow() {
 		return workspaceWindow;
 	}
 
-	public GraphicsPanel setWorkspaceWindow(WorkspaceWindow workspaceWindow) {
+	public GraphicsPanel setWorkspaceWindow(WorkspacePaintWindow workspaceWindow) {
 		this.workspaceWindow = workspaceWindow;
 		return this;
 	}

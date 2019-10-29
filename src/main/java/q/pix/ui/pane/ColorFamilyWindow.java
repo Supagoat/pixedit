@@ -4,23 +4,29 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
-import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import q.pix.ui.button.DisplayModeButton;
+import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
 
-public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
+public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	private static final long serialVersionUID = 1L;
 	private GraphicsPanel graphicsPanel;
@@ -38,10 +44,10 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 	private JButton activeColor;
 	private JPanel colorPanel;
 	private JPanel topPanel;
+	List<Set<Color>> colorFamilies = new ArrayList<>();
+	private int currentColorFamily;
 	
-	public enum DisplayMode {
-		Overlay, SideBySide
-	}
+	List<Color> colorGroupColors;
 
 	private KeyListener listener = new KeyListener() {
 		@Override
@@ -52,14 +58,6 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 				break;
 			case '=':
 				getZoomInButton().getActionListeners()[0].actionPerformed(null);
-				break;
-			case 's':
-				break;
-			case '[':
-				getPenDecreaseButton().getActionListeners()[0].actionPerformed(null);
-				break;
-			case ']':
-				getPenIncreaseButton().getActionListeners()[0].actionPerformed(null);
 				break;
 			}
 		}
@@ -76,37 +74,33 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		}
 	};
 
-	public WorkspaceWindow() {
-		setSize(1000, 1000);// getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(),
+	public ColorFamilyWindow() {
+		setSize(1900, 1000);// getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(),
 							// getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
 		setLayout(new BorderLayout());
-		setDisplayMode(DisplayMode.SideBySide);
+		setDisplayMode(WorkspaceWindow.DisplayMode.SideBySide);
 		setTopPanel(new JPanel());
 		getTopPanel().setSize(1000, 20);
 		getTopPanel().setLayout(new FlowLayout());
-		getTopPanel().add(new DisplayModeButton(this));
 		getTopPanel().add(setZoomInButton(makeZoomButton("Z+", 1)));
 		getTopPanel().add(setZoomOutButton(makeZoomButton("Z-", -1)));
-		getTopPanel().add(setPenIncreaseButton(makePenButton("P+", 1)));
-		getTopPanel().add(setPenDecreaseButton(makePenButton("P-", -1)));
 		//topPanel.add(makeDrawOutsideLinesButton());
 		add(getTopPanel(), BorderLayout.PAGE_START);
 
+		initColorGroupColors();
+		
 		setColorPanel(new JPanel());
 		getColorPanel().setSize(20, 900);
-		getColorPanel().setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
-		getColorPanel().add(makeColorButton("Head", Color.RED));
-		getColorPanel().add(makeColorButton("Back Arm", Color.GREEN));
-		getColorPanel().add(makeColorButton("Front Arm", Color.BLUE));
-		getColorPanel().add(makeColorButton("Body", Color.ORANGE));
-		getColorPanel().add(makeColorButton("Back Leg", Color.CYAN));
-		getColorPanel().add(makeColorButton("Front Leg", Color.YELLOW));
-		add(getColorPanel(), BorderLayout.WEST);
+		getColorPanel().setLayout(new GridLayout(1, 1));//.setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
+		for(int i=0;i<8;i++) {
+			getColorPanel().add(makeColorButton("Family "+i, i, getColorGroupColors().get(i), this));
+			colorFamilies.add(new HashSet<>());
+		}
+
 
 		addListener(topPanel);
 		addListener(getColorPanel());
-
-
+		add(getColorPanel(), BorderLayout.SOUTH);
 	}
 
 	public void addListener(Component component) {
@@ -114,8 +108,29 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		component.setFocusable(true);
 	}
 
-	public void setInputFilePath(BufferedImage input, String path) {
-		topPanel.add(makeSaveButton(input, path));
+	private void initColorGroupColors() {
+		colorGroupColors = new ArrayList<>();
+		Color gc = new Color(251, 0, 251);
+		for(int i=1;i<9;i++) {
+			int r = (i%3 == 0) ?  gc.getRed()-100 : gc.getRed();
+			int g = (i%3 == 1) ? gc.getGreen()+100 : gc.getGreen() ;
+			int b = (i%3 == 2) ? gc.getBlue()-100 : gc.getBlue() ;
+			if(r < 0) {
+				r = 150;
+			}
+			if(g > 255) {
+				g = 150;
+			}
+			if(b < 0) {
+				b = 150;
+			}
+			gc = new Color(r, g, b);
+			colorGroupColors.add(gc);
+		}
+	}
+	
+	public void setInputFilePath(String outputPath) {
+		topPanel.add(makeSaveButton(getColorFamilies(), outputPath));
 	}
 	
 	public void display() {
@@ -126,14 +141,15 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return graphicsPanel;
 	}
 
-	public WorkspaceWindow setGraphicsPanel(GraphicsPanel graphicsPanel) {
+	public ColorFamilyWindow setGraphicsPanel(GraphicsPanel graphicsPanel) {
 		this.graphicsPanel = graphicsPanel;
 		add(getGraphicsPanel(), BorderLayout.CENTER);
 		addListener(getGraphicsPanel());
+		graphicsPanel.setZoomLevel(4);
 		return this;
 	}
 
-	public WorkspaceWindow setBackgroundColor(BufferedImage targetImage) {
+	public ColorFamilyWindow setBackgroundColor(BufferedImage targetImage) {
 //		if(ImageUtil.deriveBackgroundColor(targetImage).isPresent()) {
 //			setBackgroundColor(ImageUtil.deriveBackgroundColor(targetImage).get());
 //			getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
@@ -147,7 +163,7 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return displayMode;
 	}
 
-	public WorkspaceWindow setDisplayMode(DisplayMode displayMode) {
+	public ColorFamilyWindow setDisplayMode(DisplayMode displayMode) {
 		this.displayMode = displayMode;
 		return this;
 	}
@@ -184,64 +200,36 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return penButton;
 	}
 
-	private JButton makeColorButton(String label, Color color) {
+	private JButton makeColorButton(String label, int family, Color color, ColorFamilyWindow window) {
 		JButton colorButton = new JButton(label);
 		colorButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				getGraphicsPanel().setDrawColor(color);
-				if(getActiveColor() != null) {
-					getActiveColor().setBackground(Color.WHITE);
-				}
-				colorButton.setBackground(Color.GRAY);
-				setActiveColor(colorButton);
+				window.setCurrentColorFamily(family);
+				colorButton.setBackground(color);
+				colorButton.setForeground(color);
+				//setActiveColor(colorButton);
 			}
 		});
 		addListener(colorButton);
 		return colorButton;
 	}
 
-	private JButton makeRefreshButton() {
-		JButton refreshButton = new JButton("Refresh");
-		refreshButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-			}
-		});
-		addListener(refreshButton);
-		return refreshButton;
-	}
-	
-
-	private JButton makeDrawOutsideLinesButton() {
-		String linesIgnored = "Lines Ignored";
-		String linesRespected = "Lines Respected";
-		JButton refreshButton = new JButton(linesIgnored);
-		refreshButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if(refreshButton.getText().equals(linesIgnored)) {
-					refreshButton.setText(linesRespected);
-					setDrawOutsideLines(false);
-					
-				} else {
-					refreshButton.setText(linesIgnored);
-					setDrawOutsideLines(true);
-				}
-			}
-		});
-		addListener(refreshButton);
-		return refreshButton;
-	}
-
-
-	private JButton makeSaveButton(BufferedImage inputImage, String inputFilePath) {
+	private JButton makeSaveButton(List<Set<Color>> colorFamilies, String outputFilepath) {
 		JButton saveButton = new JButton("Save");
 		saveButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					ImageIO.write(inputImage, "png", new File(inputFilePath));
+					PrintWriter out = new PrintWriter(new FileWriter(new File(outputFilepath+".txt")));
+					for(Set<Color> family : colorFamilies) {
+						out.println("-----");
+						for(Color c : family) {
+							out.println(c.getRGB());
+						}
+					}
+					out.flush();
+					out.close();
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -251,6 +239,13 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return saveButton;
 	}
 
+	public void assignColorFamily(Color c) {
+		for(Set<Color> family : getColorFamilies()) {
+			family.remove(c);
+		}
+		getColorFamilies().get(getCurrentColorFamily()).add(c);
+	}
+	
 	private JButton getZoomInButton() {
 		return zoomInButton;
 	}
@@ -293,14 +288,15 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 
 	public void setBackgroundColor(int backgroundColor) {
 		this.backgroundColor = Optional.of(backgroundColor);
-		getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
+		//getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
 	}
 
 	public JButton getActiveColor() {
 		return activeColor;
 	}
 
-	public WorkspaceWindow setActiveColor(JButton activeColor) {
+	public ColorFamilyWindow setActiveColor(Color color) {
+		//this.currentColorFamily = Integer.parseInt(activeColor.getLabel());
 		this.activeColor = activeColor;
 		return this;
 	}
@@ -309,7 +305,7 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return colorPanel;
 	}
 
-	public WorkspaceWindow setColorPanel(JPanel colorPanel) {
+	public ColorFamilyWindow setColorPanel(JPanel colorPanel) {
 		this.colorPanel = colorPanel;
 		return this;
 	}
@@ -318,7 +314,7 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return drawOutsideLines;
 	}
 
-	public WorkspaceWindow setDrawOutsideLines(boolean drawOutsideLines) {
+	public ColorFamilyWindow setDrawOutsideLines(boolean drawOutsideLines) {
 		this.drawOutsideLines = drawOutsideLines;
 		return this;
 	}
@@ -327,7 +323,7 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return saveButton;
 	}
 
-	public WorkspaceWindow setSaveButton(JButton saveButton) {
+	public ColorFamilyWindow setSaveButton(JButton saveButton) {
 		this.saveButton = saveButton;
 		return this;
 	}
@@ -336,10 +332,36 @@ public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 		return topPanel;
 	}
 
-	public WorkspaceWindow setTopPanel(JPanel topPanel) {
+	public ColorFamilyWindow setTopPanel(JPanel topPanel) {
 		this.topPanel = topPanel;
 		return this;
 	}
+
+	public List<Set<Color>> getColorFamilies() {
+		return colorFamilies;
+	}
+
+	public ColorFamilyWindow setColorFamilies(List<Set<Color>> colorFamilies) {
+		this.colorFamilies = colorFamilies;
+		return this;
+	}
+
+	public List<Color> getColorGroupColors() {
+		return colorGroupColors;
+	}
+
+	public void setColorGroupColors(List<Color> colorGroupColors) {
+		this.colorGroupColors = colorGroupColors;
+	}
+
+	public int getCurrentColorFamily() {
+		return currentColorFamily;
+	}
+
+	public void setCurrentColorFamily(int currentColorFamily) {
+		this.currentColorFamily = currentColorFamily;
+	}
+	
 	
 	
 

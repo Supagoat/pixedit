@@ -33,11 +33,11 @@ public class StartupScreen extends JFrame {
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
-		setSize(1000, 150);
+		setSize(1000, 300);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-		getPanel().setLayout(new GridLayout(1, 2));
+		getPanel().setLayout(new GridLayout(2, 2));
 		getPanel().add(toTrainSetButton());
 		getPanel().add(generateButton());
 		getPanel().add(loadButton());
@@ -45,6 +45,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(outlineDirButton());
 		getPanel().add(splitButton());
 		getPanel().add(analyzeColorsButton());
+		getPanel().add(colorFamilyButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -118,7 +119,7 @@ public class StartupScreen extends JFrame {
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					loadFiles(fc.getSelectedFile());
+					loadFileForSideBySideEdit(fc.getSelectedFile());
 				}
 			}
 		});
@@ -220,6 +221,26 @@ public class StartupScreen extends JFrame {
 		return loadButton;
 	}
 	
+	private JButton colorFamilyButton() {
+		JButton colorFamilyButton = new JButton("Color Family");
+		colorFamilyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					loadFileForColorFamilyEdit(fc.getSelectedFile());
+				}
+			}
+		});
+
+
+		return colorFamilyButton;
+	}
+	
+	
 	
 	private void handleError(Exception e) {
 
@@ -238,7 +259,7 @@ public class StartupScreen extends JFrame {
 		return quitButton;
 	}
 
-	private void loadFiles(File selectedFile) {
+	private void loadFileForSideBySideEdit(File selectedFile) {
 		try {
 			BufferedImage inputImage, targetImage;
 			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
@@ -256,6 +277,33 @@ public class StartupScreen extends JFrame {
 			WorkspaceWindow dispPanel = new WorkspaceWindow();
 			dispPanel.setGraphicsPanel(new PaintingPanel(dispPanel, inputImage, targetImage));
 			dispPanel.setInputFilePath(dispPanel.getGraphicsPanel().getInputImage(), input.getAbsolutePath());
+			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+			dispPanel.setBackgroundColor(targetImage);
+			dispPanel.display();
+			setVisible(false);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	private void loadFileForColorFamilyEdit(File selectedFile) {
+		try {
+			BufferedImage inputImage, targetImage;
+			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
+			if (input.exists()) {
+				inputImage = ImageUtil.loadAndScale(input);
+			} else {
+				inputImage = ImageUtil.blankImage();
+			}
+			File target = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
+			if (target.exists()) {
+				targetImage = ImageUtil.loadAndScale(target);
+			} else {
+				targetImage = ImageUtil.blankImage();
+			}
+			ColorFamilyWindow dispPanel = new ColorFamilyWindow();
+			dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, inputImage, targetImage));
+			dispPanel.setInputFilePath(input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.setBackgroundColor(targetImage);
 			dispPanel.display();

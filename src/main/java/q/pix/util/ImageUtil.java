@@ -239,19 +239,26 @@ public class ImageUtil {
 		Set<Color> colorsFound = new HashSet<>();
 		Set<SimilarColors> similars = new HashSet<>();
 		Set<Color> lonelies = new HashSet<>();
-
+		Color inputBackground = new Color(input.getRGB(0, 0));
 		for (int x = 0; x < scaled.getWidth(); x++) {
 			for (int y = 0; y < scaled.getHeight(); y++) {
 				Color c = new Color(scaled.getRGB(x, y));
+				if(c.getAlpha() == 0 || c.equals(inputBackground)) {
+					continue;
+				}
 				if (!colorsFound.contains(c)) {
 					colorsFound.add(c);
 				}
 			}
 		}
+		
+		// Not using this output right now... This just shows all of the 
+		// colors in the image
 		int size = ((int) Math.sqrt(colorsFound.size())) + 1;
 		BufferedImage output = blankImage(size, size, GREEN_BG);
 
 		for (Color c : colorsFound) {
+
 			SimilarColors sc = findMostSimilar(c, colorsFound, similars);
 			if (sc == null) {
 				lonelies.add(c);
@@ -269,35 +276,14 @@ public class ImageUtil {
 
 		}
 
-
 		for (Set<Color> family : families) {
 			System.out.println("FAMILY");
 			for (Color c : family) {
 				System.out.println(c.getRed() + " " + c.getGreen() + " " + c.getBlue());
 			}
 		}
-
-		// below is the old way
-//		int cNum = 0;
-//		
-//		for(Color c : colorsFound) {
-//			int row = cNum/output.getHeight();
-//			int col = cNum%output.getWidth();
-//			output.setRGB(col,row,c.getRGB());
-//			cNum++;
-//			System.out.print(col+","+row+": ");
-//		}
-//		
-//		for(Color c : colorsFound) {
-//			System.out.println("--------------------------");
-//			for(int y=0;y<output.getHeight(); y++) {
-//				for(int x=0;x<output.getWidth();x++) {
-//					Color atCoord = new Color(output.getRGB(x, y));
-//					System.out.println(x+","+y+" "+sameColorFamily(c, atCoord)+" "+c.equals(atCoord));
-//				}
-//			}
-//		}
-
+		output = blankImage(input.getWidth(), input.getHeight(), GREEN_BG);
+		paintColorFamilies(input, output, families);
 		return output;
 	}
 
@@ -353,30 +339,15 @@ public class ImageUtil {
 		return null;
 	}
 
-	public static boolean sameColorFamily(Color c1, Color c2) {
-		double diff = getColorDiff(c1, c2);
-		return diff > 0.0 && diff < 1.0;
-	}
+// Not being used - I put it in SimilarColors.
+//	public static double getColorDiff(Color c1, Color c2) {
+//		double[] lab1 = ColorSimilarity.RGBA2LAB(c1.getRed(), c1.getGreen(), c1.getBlue(), 1.0);
+//		double[] lab2 = ColorSimilarity.RGBA2LAB(c2.getRed(), c2.getGreen(), c2.getBlue(), 1.0);
+//		
+//		double similarity = ColorSimilarity.DeltaE00(lab1[0], lab1[1], lab1[2], lab2[0], lab2[1], lab2[2]);
+//		return similarity;
+//	}
 
-	public static double getColorDiff(Color c1, Color c2) {
-//		CIE94 comparer = new CIE94();
-//		float[] lab1 = ColorConverter.RGBtoHSV(c1.getRed(),c1.getGreen(), c1.getBlue());
-//		float[] lab2 = ColorConverter.RGBtoHSV(c2.getRed(),c2.getGreen(), c2.getBlue());
-//		System.out.println(Math.abs(lab1[0]-lab2[0])+" "+Math.abs(lab1[1]-lab2[1])+" "+Math.abs(lab1[2]-lab2[2]));
-//		return Math.abs(lab1[1]-lab2[1]) < 20 && Math.abs(lab1[2]-lab2[2]) < 20;
-		double[] lab1 = ColorSimilarity.RGBA2LAB(c1.getRed(), c1.getGreen(), c1.getBlue(), 1.0);
-		double[] lab2 = ColorSimilarity.RGBA2LAB(c2.getRed(), c2.getGreen(), c2.getBlue(), 1.0);
-		double similarity = ColorSimilarity.DeltaE00(lab1[0], lab1[1], lab1[2], lab2[0], lab2[1], lab2[2]);
-		return similarity;
-	}
-
-//	float[] lab1 = ColorConverter.RGBtoLAB(c1.getRed(),c1.getGreen(), c1.getBlue(), ColorConverter.CIE10_D65);
-//	CIELab c1Lab  = new CIELab( lab1[0], lab1[1], lab1[2] );
-//	
-//	float[] lab2 = ColorConverter.RGBtoLAB(c2.getRed(),c2.getGreen(), c2.getBlue(), ColorConverter.CIE10_D65);
-//	CIELab c2Lab  = new CIELab( lab2[0], lab2[1], lab2[2] );
-	// ColorDifference diff = comparer.compute(c1Lab, c2Lab);
-	// return diff.getValue(ColorDifference.DELTA_L_s);
 	public static BufferedImage centerImageOnGreen(BufferedImage in, int size) {
 		Color background = new Color(0, 255, 0);
 		BufferedImage out = ImageUtil.blankImage(size, size, background);
@@ -399,9 +370,45 @@ public class ImageUtil {
 				}
 			}
 		}
+
 		return out;
 	}
 
+	
+	public static void paintColorFamilies(BufferedImage input, BufferedImage out, List<Set<Color>> colorFamilies) {
+		List<Color> groupColors = new ArrayList<>();
+		Color gc = new Color(100, 50, 50);
+		for(int i=0;i<colorFamilies.size();i++) {
+			groupColors.add(gc);
+			gc = incrementFamilyColor(gc);
+		}
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				int familyIdx = -1;
+				for(int i=0;i<colorFamilies.size();i++) {
+					if(colorFamilies.get(i).contains(inputC)) {
+						familyIdx = i;
+						break;
+					}
+				}
+				if(familyIdx > -1) {
+				out.setRGB(x, y, groupColors.get(familyIdx).getRGB());
+				}
+			}
+		}
+	}
+	
+	public static Color incrementFamilyColor(Color c) {
+		if(c.getRed() < 250) {
+			return new Color(c.getRed()+50, c.getGreen(), c.getBlue());
+		}
+		if(c.getGreen() < 250) {
+			return new Color(c.getRed(), c.getGreen()+50, c.getBlue());
+		}
+		return new Color(c.getRed()+50, c.getGreen(), c.getBlue()+50);
+	}
+	
 	public static Point findUpperBound(Set<Point> points) {
 		int minX = Integer.MAX_VALUE;
 		int minY = Integer.MAX_VALUE;
