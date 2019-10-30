@@ -225,7 +225,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 					for(Set<Color> family : colorFamilies) {
 						out.println("-----");
 						for(Color c : family) {
-							out.println(c.getRGB());
+							out.println(c.getRed()+","+c.getGreen()+","+c.getBlue());
 						}
 					}
 					out.flush();
@@ -244,7 +244,33 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			family.remove(c);
 		}
 		getColorFamilies().get(getCurrentColorFamily()).add(c);
+		redrawOutput();
 	}
+	
+	public void redrawOutput() {
+		for (int y=0;y<getGraphicsPanel().getInputImage().getHeight();y++) {
+			for (int x=0;x<getGraphicsPanel().getInputImage().getWidth();x++) {
+				Color c = new Color(getGraphicsPanel().getTargetImage().getRGB(x, y));
+				int colorIdx = getColorGroupIndex(c);
+				if(colorIdx > -1) {
+					c = getColorGroupColors().get(colorIdx);
+				}
+				
+				getGraphicsPanel().getInputImage().setRGB(x, y,c.getRGB());
+			}
+		}
+		repaint();
+	}
+	
+	public int getColorGroupIndex(Color c) {
+		for(int i=0;i<getColorFamilies().size();i++) {
+			if(getColorFamilies().get(i).contains(c)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	
 	private JButton getZoomInButton() {
 		return zoomInButton;
