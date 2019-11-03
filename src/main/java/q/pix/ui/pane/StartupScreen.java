@@ -76,7 +76,7 @@ public class StartupScreen extends JFrame {
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
 						handleError(ex);
-						//makeSetButton.setText("ERROR: " + ex.toString());
+						// makeSetButton.setText("ERROR: " + ex.toString());
 					}
 				}
 			}
@@ -100,7 +100,7 @@ public class StartupScreen extends JFrame {
 						generateButton.setText("Generate Inputs");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
-						//generateButton.setText("ERROR: " + ex.toString());
+						// generateButton.setText("ERROR: " + ex.toString());
 						handleError(ex);
 					}
 				}
@@ -149,7 +149,7 @@ public class StartupScreen extends JFrame {
 
 		return loadButton;
 	}
-	
+
 	private JButton outlineDirButton() {
 		loadButton = new JButton("OutlineDir");
 		loadButton.addActionListener(new ActionListener() {
@@ -172,8 +172,7 @@ public class StartupScreen extends JFrame {
 
 		return loadButton;
 	}
-	
-	
+
 	private JButton splitButton() {
 		loadButton = new JButton("Split");
 		loadButton.addActionListener(new ActionListener() {
@@ -183,7 +182,7 @@ public class StartupScreen extends JFrame {
 					JFileChooser fc = new JFileChooser();
 					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 					int returnVal = fc.showOpenDialog(StartupScreen.this);
-					
+
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
 						ImageUtil.splitImages(fc.getSelectedFile());
 						loadButton.setText("DONE");
@@ -197,7 +196,7 @@ public class StartupScreen extends JFrame {
 
 		return loadButton;
 	}
-	
+
 	private JButton analyzeColorsButton() {
 		loadButton = new JButton("Analyze Colors");
 		loadButton.addActionListener(new ActionListener() {
@@ -220,7 +219,7 @@ public class StartupScreen extends JFrame {
 
 		return loadButton;
 	}
-	
+
 	private JButton colorFamilyButton() {
 		JButton colorFamilyButton = new JButton("Color Family");
 		colorFamilyButton.addActionListener(new ActionListener() {
@@ -229,19 +228,27 @@ public class StartupScreen extends JFrame {
 				JFileChooser fc = new JFileChooser();
 				fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
+				File imageFile = null;
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					imageFile = fc.getSelectedFile();
+				}
+
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				returnVal = fc.showOpenDialog(StartupScreen.this);
+				File familiesConfigDir = null;
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					loadFileForColorFamilyEdit(fc.getSelectedFile());
+					familiesConfigDir = fc.getSelectedFile();
 				}
+
+				loadFileForColorFamilyEdit(imageFile, familiesConfigDir);
+
 			}
 		});
 
-
 		return colorFamilyButton;
 	}
-	
-	
-	
+
 	private void handleError(Exception e) {
 
 		getPanel().add(new TextArea(e.toString()));
@@ -285,24 +292,16 @@ public class StartupScreen extends JFrame {
 			throw new RuntimeException(e);
 		}
 	}
-	
-	private void loadFileForColorFamilyEdit(File selectedFile) {
+
+	private void loadFileForColorFamilyEdit(File selectedFile, File savedFamiliesDir) {
 		try {
 			BufferedImage inputImage, targetImage;
 			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
-			if (input.exists()) {
-				inputImage = ImageUtil.loadAndScale(input);
-			} else {
-				inputImage = ImageUtil.blankImage();
-			}
-			File target = new File(FileUtil.toTargetDir(selectedFile.getAbsolutePath()));
-			if (target.exists()) {
-				targetImage = ImageUtil.loadAndScale(target);
-			} else {
-				targetImage = ImageUtil.blankImage();
-			}
-			ColorFamilyWindow dispPanel = new ColorFamilyWindow();
-			dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, inputImage, targetImage));
+			inputImage = ImageUtil.loadAndScale(input);
+			targetImage = ImageUtil.loadAndScale(input);
+			
+			ColorFamilyWindow dispPanel = new ColorFamilyWindow(savedFamiliesDir);
+			dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, inputImage, targetImage), savedFamiliesDir);
 			dispPanel.setInputFilePath(input.getAbsolutePath());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.setBackgroundColor(targetImage);

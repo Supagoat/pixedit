@@ -10,21 +10,25 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import q.pix.colorfamily.FamilyAffinity;
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
+import q.pix.util.ImageUtil;
 
 public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
@@ -40,14 +44,18 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	private JButton saveButton;
 	private Optional<Integer> backgroundColor = Optional.empty();
 	private boolean drawOutsideLines;
-	
+
 	private JButton activeColor;
 	private JPanel colorPanel;
 	private JPanel topPanel;
-	List<Set<Color>> colorFamilies = new ArrayList<>();
+	List<Set<Color>> colorFamily = new ArrayList<>();
 	private int currentColorFamily;
-	
+
 	List<Color> colorGroupColors;
+
+	List<List<Set<Color>>> colorFamilyConfigs;
+
+	private static final String FAMILY_DIVIDER = "-----";
 
 	private KeyListener listener = new KeyListener() {
 		@Override
@@ -74,9 +82,8 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		}
 	};
 
-	public ColorFamilyWindow() {
-		setSize(1900, 1000);// getZoomLevel()*AppState.IMAGE_SIZE+getHorizontalUISize(),
-							// getZoomLevel()*AppState.IMAGE_SIZE+getVerticalUISize());
+	public ColorFamilyWindow(File configDir) {
+		setSize(1900, 1000);
 		setLayout(new BorderLayout());
 		setDisplayMode(WorkspaceWindow.DisplayMode.SideBySide);
 		setTopPanel(new JPanel());
@@ -84,19 +91,17 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		getTopPanel().setLayout(new FlowLayout());
 		getTopPanel().add(setZoomInButton(makeZoomButton("Z+", 1)));
 		getTopPanel().add(setZoomOutButton(makeZoomButton("Z-", -1)));
-		//topPanel.add(makeDrawOutsideLinesButton());
 		add(getTopPanel(), BorderLayout.PAGE_START);
 
-		initColorGroupColors();
-		
+		colorGroupColors = ImageUtil.initColorGroupColors();
+
 		setColorPanel(new JPanel());
 		getColorPanel().setSize(20, 900);
-		getColorPanel().setLayout(new GridLayout(1, 1));//.setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
-		for(int i=0;i<8;i++) {
-			getColorPanel().add(makeColorButton("Family "+i, i, getColorGroupColors().get(i), this));
-			colorFamilies.add(new HashSet<>());
+		getColorPanel().setLayout(new GridLayout(1, 1));// .setLayout(new BoxLayout(colorPanel, BoxLayout.PAGE_AXIS));
+		for (int i = 0; i < 8; i++) {
+			getColorPanel().add(makeColorButton("Family " + i, i, getColorGroupColors().get(i), this));
+			getColorFamily().add(new HashSet<>());
 		}
-
 
 		addListener(topPanel);
 		addListener(getColorPanel());
@@ -108,31 +113,74 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		component.setFocusable(true);
 	}
 
-	private void initColorGroupColors() {
-		colorGroupColors = new ArrayList<>();
-		Color gc = new Color(251, 0, 251);
-		for(int i=1;i<9;i++) {
-			int r = (i%3 == 0) ?  gc.getRed()-100 : gc.getRed();
-			int g = (i%3 == 1) ? gc.getGreen()+100 : gc.getGreen() ;
-			int b = (i%3 == 2) ? gc.getBlue()-100 : gc.getBlue() ;
-			if(r < 0) {
-				r = 150;
+	public Optional<FamilyAffinity> loadConfigFiles(Set<Color> imageColors, File dir) {
+		setColorFamilyConfigs(new ArrayList<>());
+
+		List<FamilyAffinity> affinities = new ArrayList<>();
+		try {
+			for (File config : dir.listFiles()) {
+				BufferedReader in = new BufferedReader(new FileReader(config));
+				String line = in.readLine();
+				if (line.equals(FAMILY_DIVIDER)) { // it's a config file!
+					List<Set<Color>> configFamily = new ArrayList<>();
+					Set<Color> currentFamily = null;
+					while (line != null) {
+						if (FAMILY_DIVIDER.contentEquals(line)) {
+							if (currentFamily != null) {
+								configFamily.add(currentFamily);
+							}
+							currentFamily = new HashSet<>();
+						} else {
+							String[] colorStr = line.split(",");
+							currentFamily.add(new Color(Integer.parseInt(colorStr[0]), Integer.parseInt(colorStr[1]),
+									Integer.parseInt(colorStr[2])));
+						}
+						line = in.readLine();
+					}
+					getColorFamilyConfigs().add(configFamily);
+					affinities.add(ImageUtil.calculateColorGroupAffinity(imageColors, configFamily));
+				}
+
+				in.close();
 			}
-			if(g > 255) {
-				g = 150;
-			}
-			if(b < 0) {
-				b = 150;
-			}
-			gc = new Color(r, g, b);
-			colorGroupColors.add(gc);
+		} catch (Exception e) {
+
 		}
+
+		//Set<Color> inputColors = ImageUtil.getImageColors(getGraphicsPanel().getInputImage());
+
+		if (affinities.size() > 0) {
+			Collections.sort(affinities);
+			if (affinities.get(0).isMatchingAffinity(imageColors)) {
+				return Optional.of(affinities.get(0));
+			}
+		}
+
+//		for (List<Set<Color>> configged : colorFamilyConfigs) {
+//			Set<Color> allFamilyColors = new HashSet<>();
+//			for (Set<Color> cc : configged) {
+//				allFamilyColors.addAll(cc);
+//			}
+//			if (allFamilyColors.containsAll(inputColors)) {
+//				setColorFamilies(configged);
+//				redrawOutput();
+//				if (affinities.size() > 0) {
+//					Collections.sort(affinities);
+//					if (affinities.get(0).isMatchingAffinity(inputColors)) {
+//						return Optional.of(affinities.get(0));
+//					}
+//					return Optional.empty();
+//				}
+//			}
+//		}
+
+		return Optional.empty();
 	}
-	
+
 	public void setInputFilePath(String outputPath) {
-		topPanel.add(makeSaveButton(getColorFamilies(), outputPath));
+		topPanel.add(makeSaveButton(getColorFamily(), outputPath));
 	}
-	
+
 	public void display() {
 		setVisible(true);
 	}
@@ -141,11 +189,16 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return graphicsPanel;
 	}
 
-	public ColorFamilyWindow setGraphicsPanel(GraphicsPanel graphicsPanel) {
+	public ColorFamilyWindow setGraphicsPanel(GraphicsPanel graphicsPanel, File configDir) {
 		this.graphicsPanel = graphicsPanel;
 		add(getGraphicsPanel(), BorderLayout.CENTER);
 		addListener(getGraphicsPanel());
 		graphicsPanel.setZoomLevel(4);
+		Optional<FamilyAffinity> affinity = loadConfigFiles(ImageUtil.getImageColors(getGraphicsPanel().getInputImage()), configDir); 
+		if(affinity.isPresent()) {
+			setColorFamily(affinity.get().getColorFamily());
+			redrawOutput();
+		}
 		return this;
 	}
 
@@ -167,7 +220,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		this.displayMode = displayMode;
 		return this;
 	}
-	
 
 	private JButton makeZoomButton(String label, int changeBy) {
 		JButton zoomInButton = new JButton(label);
@@ -185,21 +237,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return zoomInButton;
 	}
 
-	private JButton makePenButton(String label, int changeBy) {
-		JButton penButton = new JButton(label);
-		penButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int changeTo = getGraphicsPanel().getPenSize() + changeBy;
-				if (changeTo > -1) {
-					getGraphicsPanel().setPenSize(changeTo);
-				}
-			}
-		});
-		addListener(penButton);
-		return penButton;
-	}
-
 	private JButton makeColorButton(String label, int family, Color color, ColorFamilyWindow window) {
 		JButton colorButton = new JButton(label);
 		colorButton.addActionListener(new ActionListener() {
@@ -208,7 +245,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 				window.setCurrentColorFamily(family);
 				colorButton.setBackground(color);
 				colorButton.setForeground(color);
-				//setActiveColor(colorButton);
 			}
 		});
 		addListener(colorButton);
@@ -221,11 +257,11 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					PrintWriter out = new PrintWriter(new FileWriter(new File(outputFilepath+".txt")));
-					for(Set<Color> family : colorFamilies) {
-						out.println("-----");
-						for(Color c : family) {
-							out.println(c.getRed()+","+c.getGreen()+","+c.getBlue());
+					PrintWriter out = new PrintWriter(new FileWriter(new File(outputFilepath + ".txt")));
+					for (Set<Color> family : colorFamilies) {
+						out.println(FAMILY_DIVIDER);
+						for (Color c : family) {
+							out.println(c.getRed() + "," + c.getGreen() + "," + c.getBlue());
 						}
 					}
 					out.flush();
@@ -240,38 +276,28 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	}
 
 	public void assignColorFamily(Color c) {
-		for(Set<Color> family : getColorFamilies()) {
+		for (Set<Color> family : getColorFamily()) {
 			family.remove(c);
 		}
-		getColorFamilies().get(getCurrentColorFamily()).add(c);
+		getColorFamily().get(getCurrentColorFamily()).add(c);
 		redrawOutput();
 	}
-	
+
 	public void redrawOutput() {
-		for (int y=0;y<getGraphicsPanel().getInputImage().getHeight();y++) {
-			for (int x=0;x<getGraphicsPanel().getInputImage().getWidth();x++) {
+		for (int y = 0; y < getGraphicsPanel().getInputImage().getHeight(); y++) {
+			for (int x = 0; x < getGraphicsPanel().getInputImage().getWidth(); x++) {
 				Color c = new Color(getGraphicsPanel().getTargetImage().getRGB(x, y));
-				int colorIdx = getColorGroupIndex(c);
-				if(colorIdx > -1) {
+				int colorIdx = ImageUtil.getColorGroupIndex(getColorFamily(), c);
+				if (colorIdx > -1) {
 					c = getColorGroupColors().get(colorIdx);
 				}
-				
-				getGraphicsPanel().getInputImage().setRGB(x, y,c.getRGB());
+
+				getGraphicsPanel().getInputImage().setRGB(x, y, c.getRGB());
 			}
 		}
 		repaint();
 	}
-	
-	public int getColorGroupIndex(Color c) {
-		for(int i=0;i<getColorFamilies().size();i++) {
-			if(getColorFamilies().get(i).contains(c)) {
-				return i;
-			}
-		}
-		return -1;
-	}
 
-	
 	private JButton getZoomInButton() {
 		return zoomInButton;
 	}
@@ -314,7 +340,8 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	public void setBackgroundColor(int backgroundColor) {
 		this.backgroundColor = Optional.of(backgroundColor);
-		//getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
+		// getColorPanel().add(makeColorButton("Erase", new
+		// Color(getBackgroundColor().get())));
 	}
 
 	public JButton getActiveColor() {
@@ -322,7 +349,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	}
 
 	public ColorFamilyWindow setActiveColor(Color color) {
-		//this.currentColorFamily = Integer.parseInt(activeColor.getLabel());
+		// this.currentColorFamily = Integer.parseInt(activeColor.getLabel());
 		this.activeColor = activeColor;
 		return this;
 	}
@@ -363,13 +390,12 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return this;
 	}
 
-	public List<Set<Color>> getColorFamilies() {
-		return colorFamilies;
+	public List<Set<Color>> getColorFamily() {
+		return colorFamily;
 	}
 
-	public ColorFamilyWindow setColorFamilies(List<Set<Color>> colorFamilies) {
-		this.colorFamilies = colorFamilies;
-		return this;
+	public void setColorFamily(List<Set<Color>> colorFamily) {
+		this.colorFamily = colorFamily;
 	}
 
 	public List<Color> getColorGroupColors() {
@@ -387,8 +413,13 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	public void setCurrentColorFamily(int currentColorFamily) {
 		this.currentColorFamily = currentColorFamily;
 	}
-	
-	
-	
+
+	public List<List<Set<Color>>> getColorFamilyConfigs() {
+		return colorFamilyConfigs;
+	}
+
+	public void setColorFamilyConfigs(List<List<Set<Color>>> colorFamilyConfigs) {
+		this.colorFamilyConfigs = colorFamilyConfigs;
+	}
 
 }
