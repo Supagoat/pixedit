@@ -177,8 +177,8 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return Optional.empty();
 	}
 
-	public void setInputFilePath(String outputPath) {
-		topPanel.add(makeSaveButton(getColorFamily(), outputPath));
+	public void setInputFilePath(String outputPath, String inputFileName) {
+		topPanel.add(makeSaveButton(getColorFamily(), outputPath, inputFileName));
 	}
 
 	public void display() {
@@ -251,13 +251,13 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return colorButton;
 	}
 
-	private JButton makeSaveButton(List<Set<Color>> colorFamilies, String outputFilepath) {
+	private JButton makeSaveButton(List<Set<Color>> colorFamilies, String outputFilepath, String inputFileName) {
 		JButton saveButton = new JButton("Save");
 		saveButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					PrintWriter out = new PrintWriter(new FileWriter(new File(outputFilepath + ".txt")));
+					PrintWriter out = new PrintWriter(new FileWriter(new File(outputFilepath +File.separator+inputFileName.replace(".png", ".txt"))));
 					for (Set<Color> family : colorFamilies) {
 						out.println(FAMILY_DIVIDER);
 						for (Color c : family) {

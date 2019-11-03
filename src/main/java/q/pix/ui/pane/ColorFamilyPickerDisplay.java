@@ -18,8 +18,8 @@ public class ColorFamilyPickerDisplay extends GraphicsPanel {
 	public void onGraphicsWindowClick(MouseEvent e) {
 		int x = e.getX() / getZoomLevel() + getxView();
 		int y = e.getY() / getZoomLevel() + getyView();
-		if (x > -1 && x < getInputImage().getWidth() && y > -1 && y < getInputImage().getHeight()) {
-			((ColorFamilyWindow) getWorkspaceWindow()).assignColorFamily(new Color(getInputImage().getRGB(x, y)));
+		if (x > -1 && x < getTargetImage().getWidth() && y > -1 && y < getTargetImage().getHeight()) {
+			((ColorFamilyWindow) getWorkspaceWindow()).assignColorFamily(new Color(getTargetImage().getRGB(x, y)));
 			super.onGraphicsWindowClick(e);
 		}
 	}

@@ -26,10 +26,6 @@ public class StartupScreen extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	JPanel panel;
-	private JButton makeSetButton;
-	private JButton generateButton;
-	private JButton loadButton;
-	private JButton quitButton;
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
@@ -60,7 +56,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton toTrainSetButton() {
-		makeSetButton = new JButton("Trainset");
+		JButton makeSetButton = new JButton("Trainset");
 		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -85,7 +81,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton generateButton() {
-		generateButton = new JButton("Generate Inputs");
+		JButton generateButton = new JButton("Generate Inputs");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -110,7 +106,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton loadButton() {
-		loadButton = new JButton("Load");
+		JButton loadButton = new JButton("Load");
 		loadButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -128,8 +124,8 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton outlineButton() {
-		loadButton = new JButton("Outline");
-		loadButton.addActionListener(new ActionListener() {
+		JButton outlineButton = new JButton("Outline");
+		outlineButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
@@ -142,17 +138,17 @@ public class StartupScreen extends JFrame {
 					}
 				} catch (Exception ex) {
 					handleError(ex);
-					loadButton.setText("ERROR: " + ex.toString());
+					outlineButton.setText("ERROR: " + ex.toString());
 				}
 			}
 		});
 
-		return loadButton;
+		return outlineButton;
 	}
 
 	private JButton outlineDirButton() {
-		loadButton = new JButton("OutlineDir");
-		loadButton.addActionListener(new ActionListener() {
+		JButton outlineDirButton = new JButton("OutlineDir");
+		outlineDirButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
@@ -165,17 +161,17 @@ public class StartupScreen extends JFrame {
 					}
 				} catch (Exception ex) {
 					handleError(ex);
-					loadButton.setText("ERROR: " + ex.toString());
+					outlineDirButton.setText("ERROR: " + ex.toString());
 				}
 			}
 		});
 
-		return loadButton;
+		return outlineDirButton;
 	}
 
 	private JButton splitButton() {
-		loadButton = new JButton("Split");
-		loadButton.addActionListener(new ActionListener() {
+		JButton splitButton = new JButton("Split");
+		splitButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
@@ -185,21 +181,21 @@ public class StartupScreen extends JFrame {
 
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
 						ImageUtil.splitImages(fc.getSelectedFile());
-						loadButton.setText("DONE");
+						splitButton.setText("DONE");
 					}
 				} catch (Exception ex) {
 					handleError(ex);
-					loadButton.setText("ERROR: " + ex.toString());
+					splitButton.setText("ERROR: " + ex.toString());
 				}
 			}
 		});
 
-		return loadButton;
+		return splitButton;
 	}
 
 	private JButton analyzeColorsButton() {
-		loadButton = new JButton("Analyze Colors");
-		loadButton.addActionListener(new ActionListener() {
+		JButton analyzeColorsButton = new JButton("Analyze Colors");
+		analyzeColorsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
@@ -212,12 +208,12 @@ public class StartupScreen extends JFrame {
 					}
 				} catch (Exception ex) {
 					handleError(ex);
-					loadButton.setText("ERROR: " + ex.toString());
+					analyzeColorsButton.setText("ERROR: " + ex.toString());
 				}
 			}
 		});
 
-		return loadButton;
+		return analyzeColorsButton;
 	}
 
 	private JButton colorFamilyButton() {
@@ -255,7 +251,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton quitButton() {
-		quitButton = new JButton("Exit");
+		JButton quitButton = new JButton("Exit");
 		quitButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -302,7 +298,7 @@ public class StartupScreen extends JFrame {
 			
 			ColorFamilyWindow dispPanel = new ColorFamilyWindow(savedFamiliesDir);
 			dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, inputImage, targetImage), savedFamiliesDir);
-			dispPanel.setInputFilePath(input.getAbsolutePath());
+			dispPanel.setInputFilePath(savedFamiliesDir.getAbsolutePath(), selectedFile.getName());
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 			dispPanel.setBackgroundColor(targetImage);
 			dispPanel.display();
