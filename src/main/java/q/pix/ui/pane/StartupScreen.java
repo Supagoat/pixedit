@@ -6,7 +6,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.Optional;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -15,6 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import q.pix.colorfamily.FamilyAffinity;
 import q.pix.ui.event.ReturnToStartupListener;
 import q.pix.ui.pane.paintmode.PaintingPanel;
 import q.pix.util.FileUtil;
@@ -40,8 +43,10 @@ public class StartupScreen extends JFrame {
 		getPanel().add(outlineButton());
 		getPanel().add(outlineDirButton());
 		getPanel().add(splitButton());
-		getPanel().add(analyzeColorsButton());
+		//getPanel().add(analyzeColorsButton()); // not using analyze right now
 		getPanel().add(colorFamilyButton());
+		getPanel().add(paintToFamilyButton());
+		
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -146,6 +151,7 @@ public class StartupScreen extends JFrame {
 		return outlineButton;
 	}
 
+	
 	private JButton outlineDirButton() {
 		JButton outlineDirButton = new JButton("OutlineDir");
 		outlineDirButton.addActionListener(new ActionListener() {
@@ -165,8 +171,34 @@ public class StartupScreen extends JFrame {
 				}
 			}
 		});
-
 		return outlineDirButton;
+	}
+	
+	private JButton paintToFamilyButton() {
+		JButton paintToFamilyButton = new JButton("Paint To Family");
+		paintToFamilyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser fc = new JFileChooser();
+				//	fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+					int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File dir = FileUtil.getFamilyConfigDir(fc.getSelectedFile());
+						BufferedImage TEMPORARY_ONE_IMAGE_SELECTION = ImageIO.read(fc.getSelectedFile());
+						Optional<FamilyAffinity> bestConfigMatch = FileUtil.loadConfigFiles(ImageUtil.getImageColors(TEMPORARY_ONE_IMAGE_SELECTION), dir);
+						ImageUtil.paintToFamily(ImageUtil.initColorGroupColors(), fc.getSelectedFile(), bestConfigMatch.get().getColorFamily());
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					paintToFamilyButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return paintToFamilyButton;
 	}
 
 	private JButton splitButton() {
@@ -200,7 +232,7 @@ public class StartupScreen extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					JFileChooser fc = new JFileChooser();
-					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 					int returnVal = fc.showOpenDialog(StartupScreen.this);
 
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -215,6 +247,30 @@ public class StartupScreen extends JFrame {
 
 		return analyzeColorsButton;
 	}
+	
+//	private JButton paintFromFamiliesButton() {
+//		JButton paintFromFamiliesButton = new JButton("Paint From Fam");
+//		paintFromFamiliesButton.addActionListener(new ActionListener() {
+//			@Override
+//			public void actionPerformed(ActionEvent e) {
+//				try {
+//					JFileChooser fc = new JFileChooser();
+//					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+//					int returnVal = fc.showOpenDialog(StartupScreen.this);
+//
+//					if (returnVal == JFileChooser.APPROVE_OPTION) {
+//						ImageUtil.analyzeColors(fc.getSelectedFile());
+//					}
+//				} catch (Exception ex) {
+//					handleError(ex);
+//					paintFromFamiliesButton.setText("ERROR: " + ex.toString());
+//				}
+//			}
+//		});
+//
+//		return paintFromFamiliesButton;
+//	}
+
 
 	private JButton colorFamilyButton() {
 		JButton colorFamilyButton = new JButton("Color Family");
@@ -229,24 +285,25 @@ public class StartupScreen extends JFrame {
 					imageFile = fc.getSelectedFile();
 				}
 
-				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-				returnVal = fc.showOpenDialog(StartupScreen.this);
-				File familiesConfigDir = null;
+//				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+//				returnVal = fc.showOpenDialog(StartupScreen.this);
+//				File familiesConfigDir = null;
+//
+//				if (returnVal == JFileChooser.APPROVE_OPTION) {
+//					familiesConfigDir = fc.getSelectedFile();
+//				}
 
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					familiesConfigDir = fc.getSelectedFile();
-				}
-
-				loadFileForColorFamilyEdit(imageFile, familiesConfigDir);
+				loadFileForColorFamilyEdit(imageFile, FileUtil.getFamilyConfigDir(imageFile));
 
 			}
 		});
 
 		return colorFamilyButton;
 	}
+	
 
 	private void handleError(Exception e) {
-
+		e.printStackTrace();
 		getPanel().add(new TextArea(e.toString()));
 	}
 

@@ -16,7 +16,9 @@ import javax.imageio.ImageIO;
 
 import org.imgscalr.Scalr;
 
+import q.pix.colorfamily.ColorFamily;
 import q.pix.colorfamily.FamilyAffinity;
+import q.pix.colorfamily.SimilarColors;
 
 public class ImageUtil {
 	public static final int IMAGE_WIDTH = 256;
@@ -228,6 +230,13 @@ public class ImageUtil {
 
 	}
 
+	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family) throws IOException {
+		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
+		ImageIO.write(painted, "png", new File(inputFile.getAbsolutePath().replace(".png", "_family.png")));
+	}
+
+	// Not using analyze colors right now because LAB still ends up grouping some
+	// colors together in ways I don't like
 	public static void analyzeColors(File inputFile) throws IOException {
 		BufferedImage analyzed = analyzeColors(ImageIO.read(inputFile));
 		ImageIO.write(analyzed, "png", new File(inputFile.getAbsolutePath().replace(".png", "_colors.png")));
@@ -244,7 +253,7 @@ public class ImageUtil {
 		for (int x = 0; x < scaled.getWidth(); x++) {
 			for (int y = 0; y < scaled.getHeight(); y++) {
 				Color c = new Color(scaled.getRGB(x, y));
-				if(c.getAlpha() == 0 || c.equals(inputBackground)) {
+				if (c.getAlpha() == 0 || c.equals(inputBackground)) {
 					continue;
 				}
 				if (!colorsFound.contains(c)) {
@@ -252,8 +261,8 @@ public class ImageUtil {
 				}
 			}
 		}
-		
-		// Not using this output right now... This just shows all of the 
+
+		// Not using this output right now... This just shows all of the
 		// colors in the image
 		int size = ((int) Math.sqrt(colorsFound.size())) + 1;
 		BufferedImage output = blankImage(size, size, GREEN_BG);
@@ -267,66 +276,49 @@ public class ImageUtil {
 				similars.add(sc);
 			}
 		}
-		List<Set<Color>> families = new ArrayList<>();
+		ColorFamily family = new ColorFamily();
 		for (SimilarColors sc : similars) {
-			if (!hasFamily(sc.getC1(), families)) {
-				Set<Color> family = makeFamily(sc.getC1(), similars);
-				family.addAll(makeFamily(sc.getC2(), similars));
-				families.add(family);
+			if (!family.isInFamily(sc.getC1())) {
+				Set<Color> group = makeColorGroup(sc.getC1(), similars);
+				group.addAll(makeColorGroup(sc.getC2(), similars));
+				family.addGroup(group);
 			}
 
 		}
 
-		for (Set<Color> family : families) {
+		for (Set<Color> group : family.getColorGroups()) {
 			System.out.println("FAMILY");
-			for (Color c : family) {
+			for (Color c : group) {
 				System.out.println(c.getRed() + " " + c.getGreen() + " " + c.getBlue());
 			}
 		}
 		output = blankImage(input.getWidth(), input.getHeight(), GREEN_BG);
-		paintColorFamilies(input, output, families);
+		paintColorFamilies(input, output, family);
 		return output;
 	}
 
-	public static boolean hasFamily(Color c, List<Set<Color>> family) {
-		for (Set<Color> group : family) {
-			if (group.contains(c)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public static Set<Color> makeFamily(Color c, Set<SimilarColors> similars) {
+	public static Set<Color> makeColorGroup(Color c, Set<SimilarColors> similars) {
 		Set<Color> family = new HashSet<>();
 		family.add(c);
 		addFamilyMembers(family, similars);
 		return family;
 	}
-	
-	public static int countFamilyColors(List<Set<Color>> family) {
-		int ct = 0;
-		for(Set s : family) {
-			ct+=s.size();
-		}
-		return ct;
-	}
 
-	public static void addFamilyMembers(Set<Color> family, Set<SimilarColors> similars) {
+	public static void addFamilyMembers(Set<Color> group, Set<SimilarColors> similars) {
 
 		boolean added = false;
-		List<Color> concurrency = new ArrayList<Color>(family);
+		List<Color> concurrency = new ArrayList<Color>(group);
 		for (Color fc : concurrency) {
 			for (SimilarColors sc : similars) {
 				if (sc.containsColor(fc)) {
-					added = family.add(sc.getC1());
-					added = added || family.add(sc.getC2());
+					added = group.add(sc.getC1());
+					added = added || group.add(sc.getC2());
 				}
 			}
 		}
 		if (added) {
 			// for(Color fc : family) {
-			addFamilyMembers(family, similars);
+			addFamilyMembers(group, similars);
 			// }
 		}
 	}
@@ -383,37 +375,34 @@ public class ImageUtil {
 		return out;
 	}
 
-	
-	public static  Set<Color> getImageColors(BufferedImage image) {
+	public static Set<Color> getImageColors(BufferedImage image) {
 		Set<Color> colors = new HashSet<>();
 		Color background = new Color(image.getRGB(0, 0));
 
 		for (int y = 0; y < image.getHeight(); y++) {
 			for (int x = 0; x < image.getWidth(); x++) {
 				Color c = new Color(image.getRGB(x, y));
-				if(!background.equals(c)) {
+				if (!background.equals(c)) {
 					colors.add(c);
 				}
 			}
 		}
 		return colors;
 	}
-	
-	public static int getColorGroupIndex(List<Set<Color>> colorFamilies, Color c) {
-		for (int i = 0; i < colorFamilies.size(); i++) {
-			if (colorFamilies.get(i).contains(c)) {
+
+	public static int getColorGroupIndex(ColorFamily colorFamily, Color c) {
+		for (int i = 0; i < colorFamily.size(); i++) {
+			if (colorFamily.get(i).contains(c)) {
 				return i;
 			}
 		}
 		return -1;
 	}
 
-	
-	
-	public static void paintColorFamilies(BufferedImage input, BufferedImage out, List<Set<Color>> colorFamilies) {
+	public static void paintColorFamilies(BufferedImage input, BufferedImage out, ColorFamily colorFamilies) {
 		List<Color> groupColors = new ArrayList<>();
 		Color gc = new Color(100, 50, 50);
-		for(int i=0;i<colorFamilies.size();i++) {
+		for (int i = 0; i < colorFamilies.size(); i++) {
 			groupColors.add(gc);
 			gc = incrementFamilyColor(gc);
 		}
@@ -421,60 +410,74 @@ public class ImageUtil {
 			for (int x = 0; x < out.getWidth(); x++) {
 				Color inputC = new Color(input.getRGB(x, y));
 				int familyIdx = -1;
-				for(int i=0;i<colorFamilies.size();i++) {
-					if(colorFamilies.get(i).contains(inputC)) {
+				for (int i = 0; i < colorFamilies.size(); i++) {
+					if (colorFamilies.get(i).contains(inputC)) {
 						familyIdx = i;
 						break;
 					}
 				}
-				if(familyIdx > -1) {
-				out.setRGB(x, y, groupColors.get(familyIdx).getRGB());
+				if (familyIdx > -1) {
+					out.setRGB(x, y, groupColors.get(familyIdx).getRGB());
 				}
 			}
 		}
 	}
-	
+
 	public static Color incrementFamilyColor(Color c) {
-		if(c.getRed() < 250) {
-			return new Color(c.getRed()+50, c.getGreen(), c.getBlue());
+		if (c.getRed() < 250) {
+			return new Color(c.getRed() + 50, c.getGreen(), c.getBlue());
 		}
-		if(c.getGreen() < 250) {
-			return new Color(c.getRed(), c.getGreen()+50, c.getBlue());
+		if (c.getGreen() < 250) {
+			return new Color(c.getRed(), c.getGreen() + 50, c.getBlue());
 		}
-		return new Color(c.getRed()+50, c.getGreen(), c.getBlue()+50);
+		return new Color(c.getRed() + 50, c.getGreen(), c.getBlue() + 50);
 	}
-	
-	public static FamilyAffinity calculateColorGroupAffinity(Set<Color> colors, List<Set<Color>> colorGroup) {
-		
+
+	public static FamilyAffinity calculateColorGroupAffinity(Set<Color> colors, ColorFamily colorFamily) {
+
 		int matchCount = 0;
 		int missingInFamilyCount = 0;
 
-		for(Color c : colors) {
-			if(hasFamily(c, colorGroup)) {
+		for (Color c : colors) {
+			if (colorFamily.isInFamily(c)) {
 				matchCount++;
 			} else {
 				missingInFamilyCount++;
 			}
 		}
-		int familySize = countFamilyColors(colorGroup);
-		return new FamilyAffinity(matchCount, missingInFamilyCount, familySize-matchCount, colorGroup);
+		int familySize = colorFamily.countFamilyColors();
+		return new FamilyAffinity(matchCount, missingInFamilyCount, familySize - matchCount, colorFamily);
 	}
 
-	
 	public static List<Color> initColorGroupColors() {
 		List<Color> colorGroupColors = new ArrayList<>();
-		colorGroupColors.add(new Color(194,75,75));
-		colorGroupColors.add(new Color(75,75,194));
-		colorGroupColors.add(new Color(80,168,56));
-		colorGroupColors.add(new Color(178,64,182));
-		colorGroupColors.add(new Color(162,162,58));
-		colorGroupColors.add(new Color(58,163,59));
-		colorGroupColors.add(new Color(94,60,142));
-		colorGroupColors.add(new Color(68,134,124));
+		colorGroupColors.add(new Color(194, 75, 75));
+		colorGroupColors.add(new Color(75, 75, 194));
+		colorGroupColors.add(new Color(160, 120, 75));
+		colorGroupColors.add(new Color(178, 64, 182));
+		colorGroupColors.add(new Color(162, 162, 58));
+		colorGroupColors.add(new Color(100, 100, 100));
+		colorGroupColors.add(new Color(94, 60, 142));
+		colorGroupColors.add(new Color(68, 134, 124));
 		return colorGroupColors;
 	}
 
-	
+	public static BufferedImage paintToFamily(List<Color> baseColors, BufferedImage input, ColorFamily family) {
+		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				if (isBackgroundColor(inputC.getRGB())) {
+					out.setRGB(x, y, inputC.getRGB());
+				} else {
+					out.setRGB(x, y,
+							family.offsetLuminance(baseColors.get(family.getColorGroup(inputC)), inputC).getRGB());
+				}
+			}
+		}
+		return out;
+	}
+
 	public static Point findUpperBound(Set<Point> points) {
 		int minX = Integer.MAX_VALUE;
 		int minY = Integer.MAX_VALUE;

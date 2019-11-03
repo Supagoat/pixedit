@@ -11,9 +11,9 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 	private int matchCount;
 	private int missingInFamilyCount;
 	private int inFamilyButNotInImageCount; // mostly a tie breaker
-	private List<Set<Color>> colorFamily;
+	private ColorFamily colorFamily;
 	
-	public FamilyAffinity(int matchCount, int missingInFamilyCount, int inFamilyButNotInImageCount, List<Set<Color>> colorFamily) {
+	public FamilyAffinity(int matchCount, int missingInFamilyCount, int inFamilyButNotInImageCount, ColorFamily colorFamily) {
 		this.matchCount = matchCount;
 		this.missingInFamilyCount = missingInFamilyCount;
 		this.inFamilyButNotInImageCount = inFamilyButNotInImageCount;
@@ -21,7 +21,7 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 	}
 
 	public boolean isMatchingAffinity(Set<Color> colors) {
-		Long inFamily = colors.stream().filter(c -> ImageUtil.hasFamily(c, getColorFamily())).collect(Collectors.counting());
+		Long inFamily = colors.stream().filter(c -> getColorFamily().isInFamily(c)).collect(Collectors.counting());
 		return inFamily == null ? false : inFamily.doubleValue()/colors.size() > 0.5;
 	}
 	
@@ -49,11 +49,11 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 		this.inFamilyButNotInImageCount = inFamilyButNotInImageCount;
 	}
 
-	public List<Set<Color>> getColorFamily() {
+	public ColorFamily getColorFamily() {
 		return colorFamily;
 	}
 
-	public void setColorFamily(List<Set<Color>> colorFamily) {
+	public void setColorFamily(ColorFamily colorFamily) {
 		this.colorFamily = colorFamily;
 	}
 

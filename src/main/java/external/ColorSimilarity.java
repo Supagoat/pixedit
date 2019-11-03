@@ -87,31 +87,31 @@ public class ColorSimilarity {
 	 */
 	public static double[] RGB2XYZ(double R, double G, double B, double A) {
 		if (R > 255) {
-			System.out.println("Red value was higher than 255. It has been set to 255.");
+			//System.out.println("Red value was higher than 255. It has been set to 255.");
 			R = 255.0;
 		} else if (R < 0) {
-			System.out.println("Red value was smaller than 0. It has been set to 0.");
+			//System.out.println("Red value was smaller than 0. It has been set to 0.");
 			R = 0.0;
 		}
 		if (G > 255) {
-			System.out.println("Green value was higher than 255. It has been set to 255.");
+			//System.out.println("Green value was higher than 255. It has been set to 255.");
 			G = 255.0;
 		} else if (G < 0) {
-			System.out.println("Green value was smaller than 0. It has been set to 0.");
+			//System.out.println("Green value was smaller than 0. It has been set to 0.");
 			G = 0.0;
 		}
 		if (B > 255) {
-			System.out.println("Blue value was higher than 255. It has been set to 255.");
+			//System.out.println("Blue value was higher than 255. It has been set to 255.");
 			B = 255.0;
 		} else if (B < 0) {
-			System.out.println("Blue value was smaller than 0. It has been set to 0.");
+			//System.out.println("Blue value was smaller than 0. It has been set to 0.");
 			B = 0.0;
 		}
 		if (A > 1) {
-			System.out.println("Obacity value was higher than 1. It has been set to 1.");
+			//System.out.println("Obacity value was higher than 1. It has been set to 1.");
 			A = 1.0;
 		} else if (A < 0) {
-			System.out.println("Obacity value was smaller than 0. It has been set to 0.");
+			//System.out.println("Obacity value was smaller than 0. It has been set to 0.");
 			A = 0.0;
 		}
 		double r = R / 255.0;
