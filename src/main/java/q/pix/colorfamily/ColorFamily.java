@@ -59,27 +59,6 @@ public class ColorFamily {
 		this.colorGroups = colorGroups;
 	}
 	
-	// Input color is intended to be the middle color of the group as the 
-	// OK I know what I want to do here but need to find the best way
-	// I need to take the base color group color and the input color and
-	// then map the input color to a luminance offset from the color group color
-	// Wait why do I need to do this with the whole group
-	// doesn't just the luminance matter?
-	
-	
-//	public List<Color> toLuminance(Color groupColor, Color inputColor) {
-//		return toLuminance(groupColor, getColorGroup(inputColor));
-//	}	
-//	
-//	public List<Color> toLuminance(Color groupColor, int groupIndex) {
-//		List<Color> groupToLum = new ArrayList<>();
-//		for(Color c : get(groupIndex)) {
-//			groupToLum.add(new SimilarColors(groupColor, c).getLumOffsetColor());
-//		}
-//		groupToLum.sort(new ColorLumComparator());
-//		return groupToLum;
-//	}
-	
 	public Color offsetLuminance(Color baseColor, Color inputColor) {
 		return new SimilarColors(baseColor, inputColor).getLumOffsetColor();
 	}

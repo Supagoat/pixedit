@@ -1,8 +1,6 @@
 package q.pix.util;
 
 import java.awt.Color;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -14,8 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import javax.swing.JButton;
 
 import q.pix.colorfamily.ColorFamily;
 import q.pix.colorfamily.FamilyAffinity;

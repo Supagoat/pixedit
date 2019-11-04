@@ -55,9 +55,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	List<Color> colorGroupColors;
 
-	//List<ColorFamily> colorFamilyConfigs;
-
-
 
 	private KeyListener listener = new KeyListener() {
 		@Override
@@ -114,50 +111,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		component.addKeyListener(listener);
 		component.setFocusable(true);
 	}
-// Moving to FileUtil
-//	public Optional<FamilyAffinity> AAAloadConfigFiles(Set<Color> imageColors, File dir) {
-//		 Do I need the colorFamilyConfigs? setColorFamilyConfigs(new ArrayList<>());
-//
-//		List<FamilyAffinity> affinities = new ArrayList<>();
-//		try {
-//			for (File config : dir.listFiles()) {
-//				BufferedReader in = new BufferedReader(new FileReader(config));
-//				String line = in.readLine();
-//				if (line.equals(FAMILY_DIVIDER)) { // it's a config file!
-//					ColorFamily configFamily = new ColorFamily();
-//					Set<Color> currentFamily = null;
-//					while (line != null) {
-//						if (FAMILY_DIVIDER.contentEquals(line)) {
-//							if (currentFamily != null) {
-//								configFamily.addGroup(currentFamily);
-//							}
-//							currentFamily = new HashSet<>();
-//						} else {
-//							String[] colorStr = line.split(",");
-//							currentFamily.add(new Color(Integer.parseInt(colorStr[0]), Integer.parseInt(colorStr[1]),
-//									Integer.parseInt(colorStr[2])));
-//						}
-//						line = in.readLine();
-//					}
-//				 Do I need the colorFamilyConfigs? getColorFamilyConfigs().add(configFamily);
-//					affinities.add(ImageUtil.calculateColorGroupAffinity(imageColors, configFamily));
-//				}
-//
-//				in.close();
-//			}
-//		} catch (Exception e) {
-//
-//		}
-//
-//		if (affinities.size() > 0) {
-//			Collections.sort(affinities);
-//			if (affinities.get(0).isMatchingAffinity(imageColors)) {
-//				return Optional.of(affinities.get(0));
-//			}
-//		}
-//
-//		return Optional.empty();
-//	}
 
 	public void setInputFilePath(String outputPath, String inputFileName) {
 		topPanel.add(makeSaveButton(getColorFamily(), outputPath, inputFileName));
@@ -275,7 +228,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 				if (colorIdx > -1) {
 					c = getColorGroupColors().get(colorIdx);
 				}
-
 				getGraphicsPanel().getInputImage().setRGB(x, y, c.getRGB());
 			}
 		}
@@ -330,12 +282,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	public JButton getActiveColor() {
 		return activeColor;
-	}
-
-	public ColorFamilyWindow setActiveColor(Color color) {
-		// this.currentColorFamily = Integer.parseInt(activeColor.getLabel());
-		this.activeColor = activeColor;
-		return this;
 	}
 
 	public JPanel getColorPanel() {
