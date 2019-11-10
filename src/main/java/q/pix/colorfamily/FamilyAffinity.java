@@ -19,10 +19,29 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 		this.inFamilyButNotInImageCount = inFamilyButNotInImageCount;
 		this.colorFamily = colorFamily;
 	}
+	
+	public FamilyAffinity (Set<Color> colors, ColorFamily colorFamily) {
+
+		int matchCount = 0;
+		int missingInFamilyCount = 0;
+
+		for (Color c : colors) {
+			if (colorFamily.isInFamily(c)) {
+				matchCount++;
+			} else {
+				missingInFamilyCount++;
+			}
+		}
+		int familySize = colorFamily.countFamilyColors();
+		this.matchCount = matchCount;
+		this.missingInFamilyCount = missingInFamilyCount;
+		this.inFamilyButNotInImageCount =  familySize - matchCount;
+		this.colorFamily = colorFamily;
+	}
 
 	public boolean isMatchingAffinity(Set<Color> colors) {
 		Long inFamily = colors.stream().filter(c -> getColorFamily().isInFamily(c)).collect(Collectors.counting());
-		return inFamily == null ? false : inFamily.doubleValue()/colors.size() > 0.5;
+		return inFamily == null ? false : inFamily.doubleValue()/colors.size() > 0.75;
 	}
 	
 	public int getMatchCount() {
@@ -66,10 +85,10 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 			return 1;
 		}
 		
-		if(this.getMatchCount() < o.getMatchCount()) {
+		if(this.getMatchCount() > o.getMatchCount()) {
 			return -1;
 		}
-		if(this.getMatchCount() > o.getMatchCount()) {
+		if(this.getMatchCount() < o.getMatchCount()) {
 			return 1;
 		}
 		

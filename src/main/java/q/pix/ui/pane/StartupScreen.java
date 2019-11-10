@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -17,7 +18,9 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import q.pix.colorfamily.ColorFamily;
 import q.pix.colorfamily.FamilyAffinity;
+import q.pix.colorfamily.PaintingQueue;
 import q.pix.ui.event.ReturnToStartupListener;
 import q.pix.ui.pane.paintmode.PaintingPanel;
 import q.pix.util.FileUtil;
@@ -279,7 +282,8 @@ public class StartupScreen extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser fc = new JFileChooser();
-				fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+				//fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
 				File imageFile = null;
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -294,7 +298,7 @@ public class StartupScreen extends JFrame {
 //					familiesConfigDir = fc.getSelectedFile();
 //				}
 
-				loadFileForColorFamilyEdit(imageFile, FileUtil.getFamilyConfigDir(imageFile));
+				beginColorFamilyEdit(imageFile, FileUtil.getFamilyConfigDir(imageFile));
 
 			}
 		});
@@ -346,20 +350,18 @@ public class StartupScreen extends JFrame {
 		}
 	}
 
-	private void loadFileForColorFamilyEdit(File selectedFile, File savedFamiliesDir) {
+	private void beginColorFamilyEdit(File selectedDir, File savedFamiliesDir) {
 		try {
-			BufferedImage inputImage, targetImage;
-			File input = new File(FileUtil.toInputDir(selectedFile.getAbsolutePath()));
-			inputImage = ImageUtil.loadAndScale(input);
-			targetImage = ImageUtil.loadAndScale(input);
-
-			ColorFamilyWindow dispPanel = new ColorFamilyWindow(savedFamiliesDir);
-			dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, inputImage, targetImage),
-					savedFamiliesDir);
-			dispPanel.setInputFilePath(savedFamiliesDir.getAbsolutePath(), selectedFile.getName());
-			dispPanel.addWindowListener(new ReturnToStartupListener(this));
-			dispPanel.setBackgroundColor(targetImage);
+			PaintingQueue queue = new PaintingQueue();
+			ColorFamilyWindow dispPanel = new ColorFamilyWindow();
+			dispPanel.setOnSaveCallback(queue::queueStep);
 			dispPanel.display();
+			queue.setup(selectedDir, savedFamiliesDir, dispPanel::setNewImage);
+			dispPanel.makeSaveButton(queue::getCurrentFamily, savedFamiliesDir.getAbsolutePath(), queue::getInputFileName, queue::queueStep);
+			//dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, dispPanel.));
+			
+			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+
 			setVisible(false);
 		} catch (Exception e) {
 			throw new RuntimeException(e);

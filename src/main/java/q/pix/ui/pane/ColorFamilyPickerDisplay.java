@@ -4,12 +4,19 @@ import java.awt.Color;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
+import q.pix.util.ImageUtil;
+
 public class ColorFamilyPickerDisplay extends GraphicsPanel {
 	private static final long serialVersionUID = 1L;
 
-	public ColorFamilyPickerDisplay(ColorFamilyWindow workspaceWindow, BufferedImage inputImage,
-			BufferedImage targetImage) {
-		super(workspaceWindow, inputImage, targetImage);
+	public ColorFamilyPickerDisplay(ColorFamilyWindow workspaceWindow) {
+		super(workspaceWindow, null, null);
+		addMouseListener(this);
+		addMouseMotionListener(this);
+	}
+	
+	public ColorFamilyPickerDisplay(ColorFamilyWindow workspaceWindow, BufferedImage inputImage) {
+		super(workspaceWindow, inputImage, ImageUtil.copyImage(inputImage));
 		addMouseListener(this);
 		addMouseMotionListener(this);
 	}

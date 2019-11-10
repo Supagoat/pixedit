@@ -36,14 +36,18 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	private boolean inBackgroundSelectionMode = false;
 
-	public GraphicsPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+	public GraphicsPanel(WorkspacePaintWindow workspaceWindow) {
 		setWorkspaceWindow(workspaceWindow);
-		setInputImage(inputImage);
-		setTargetImage(targetImage);
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		pressedButtons = new boolean[3];
 		setThreadEx(new ThreadPoolExecutor(8, 8, 10l, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>()));
+	}
+	public GraphicsPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+		this(workspaceWindow);
+		setInputImage(inputImage);
+		setTargetImage(targetImage);
+
 	}
 
 	@Override

@@ -140,6 +140,17 @@ public class ImageUtil {
 
 	}
 
+	public static BufferedImage copyImage(BufferedImage input) {
+		BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), input.getType());
+
+		for (int x = 0; x < output.getWidth(); x++) {
+			for (int y = 0; y < output.getHeight(); y++) {
+				output.setRGB(x, y, input.getRGB(x, y));
+			}
+		}
+		return output;
+	}
+
 	public static void makeTrainSet(String dir) throws IOException {
 		List<String> contents = Arrays.asList(new File(dir).list());
 		if (!contents.contains(FileUtil.INPUT_DIR) || !contents.contains(FileUtil.TARGET_DIR)) {
@@ -242,6 +253,43 @@ public class ImageUtil {
 		ImageIO.write(analyzed, "png", new File(inputFile.getAbsolutePath().replace(".png", "_colors.png")));
 	}
 
+	public static Set<Color> getDistinctColors(BufferedImage img) {
+		Set<Color> colorsFound = new HashSet<>();
+		Color inputBackground = new Color(img.getRGB(0, 0));
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getHeight(); y++) {
+				Color c = new Color(img.getRGB(x, y));
+				if (c.getAlpha() == 0 || c.equals(inputBackground)) {
+					continue;
+				}
+				if (!colorsFound.contains(c)) {
+					colorsFound.add(c);
+				}
+			}
+		}
+		return colorsFound;
+	}
+
+	public static FamilyAffinity findClosestColorFamily(BufferedImage img, List<ColorFamily> colorFamilies) {
+		return findClosestColorFamily(ImageUtil.getDistinctColors(img), colorFamilies);
+	}
+
+	public static FamilyAffinity findClosestColorFamily(Set<Color> imgColors, List<ColorFamily> colorFamilies) {
+		FamilyAffinity closestAffinity = null;
+		for (ColorFamily family : colorFamilies) {
+			FamilyAffinity aff = new FamilyAffinity(imgColors, family);
+
+			if (closestAffinity == null) {
+				closestAffinity = aff;
+			} else {
+				FamilyAffinity[] compare = new FamilyAffinity[] { closestAffinity, aff };
+				Arrays.sort(compare);
+				closestAffinity = compare[0];
+			}
+		}
+		return closestAffinity;
+	}
+
 	// Using LAB .... I'm not using this right now but I might
 	public static BufferedImage analyzeColors(BufferedImage input) {
 		BufferedImage scaled = input;
@@ -340,15 +388,6 @@ public class ImageUtil {
 		return null;
 	}
 
-// Not being used - I put it in SimilarColors.
-//	public static double getColorDiff(Color c1, Color c2) {
-//		double[] lab1 = ColorSimilarity.RGBA2LAB(c1.getRed(), c1.getGreen(), c1.getBlue(), 1.0);
-//		double[] lab2 = ColorSimilarity.RGBA2LAB(c2.getRed(), c2.getGreen(), c2.getBlue(), 1.0);
-//		
-//		double similarity = ColorSimilarity.DeltaE00(lab1[0], lab1[1], lab1[2], lab2[0], lab2[1], lab2[2]);
-//		return similarity;
-//	}
-
 	public static BufferedImage centerImageOnGreen(BufferedImage in, int size) {
 		Color background = new Color(0, 255, 0);
 		BufferedImage out = ImageUtil.blankImage(size, size, background);
@@ -393,6 +432,9 @@ public class ImageUtil {
 	public static int getColorGroupIndex(ColorFamily colorFamily, Color c) {
 		for (int i = 0; i < colorFamily.size(); i++) {
 			if (colorFamily.get(i).contains(c)) {
+				if(i > 8) {
+					return i;
+				}
 				return i;
 			}
 		}
@@ -431,22 +473,6 @@ public class ImageUtil {
 			return new Color(c.getRed(), c.getGreen() + 50, c.getBlue());
 		}
 		return new Color(c.getRed() + 50, c.getGreen(), c.getBlue() + 50);
-	}
-
-	public static FamilyAffinity calculateColorGroupAffinity(Set<Color> colors, ColorFamily colorFamily) {
-
-		int matchCount = 0;
-		int missingInFamilyCount = 0;
-
-		for (Color c : colors) {
-			if (colorFamily.isInFamily(c)) {
-				matchCount++;
-			} else {
-				missingInFamilyCount++;
-			}
-		}
-		int familySize = colorFamily.countFamilyColors();
-		return new FamilyAffinity(matchCount, missingInFamilyCount, familySize - matchCount, colorFamily);
 	}
 
 	public static List<Color> initColorGroupColors() {
@@ -553,12 +579,9 @@ public class ImageUtil {
 			if (inputFile.isDirectory()) {
 				File outDir = new File(inputFile.getAbsoluteFile() + "_outlined");
 				outDir.mkdir();
-				File[] files = inputFile.listFiles();
-				for (int i = 0; i < files.length; i++) {
-					File f = files[i];
-					if (f.getName().endsWith(".png")) {
-						outlineFile(f, outDir.getAbsolutePath());
-					}
+				File[] files = inputFile.listFiles((dirf, name) -> name.endsWith(".png"));
+				for (File file : files) {
+					outlineFile(file, outDir.getAbsolutePath());
 				}
 			} else {
 				outlineSingleFile(inputFile);

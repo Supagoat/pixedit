@@ -3,11 +3,14 @@ package q.pix.colorfamily;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class ColorFamily {
 	private List<Set<Color>> colorGroups;
+	private String familyName;
+	public static final int FAMILY_GROUP_COUNT = 8;
 	
 	public ColorFamily(List<Set<Color>> colorGroups) {
 		this.colorGroups = colorGroups;
@@ -21,8 +24,17 @@ public class ColorFamily {
 		return getColorGroups().get(index);
 	}
 	
+	// When loading from a file don't add empty indexes
+	public ColorFamily(String familyName) {
+		this.colorGroups = new ArrayList<>();
+		this.familyName = familyName;
+	}
+	
 	public ColorFamily() {
 		setColorGroups(new ArrayList<>());
+		for(int i=0;i<FAMILY_GROUP_COUNT;i++) {
+			getColorGroups().add(new HashSet<>());
+		}
 	}
 	
 	public void addGroup(Set<Color> colors) {
@@ -30,8 +42,12 @@ public class ColorFamily {
 	}
 	
 	public boolean isInFamily(Color c) {
-		return getColorGroup(c) > -1;
-		
+		boolean isIn =  getColorGroup(c) > -1;
+		return isIn;
+	}
+	
+	public boolean containsAllColors(Set<Color> colors) {
+		return colors.stream().allMatch(c -> isInFamily(c));
 	}
 	
 	public int getColorGroup(Color c) {
@@ -62,7 +78,17 @@ public class ColorFamily {
 	public Color offsetLuminance(Color baseColor, Color inputColor) {
 		return new SimilarColors(baseColor, inputColor).getLumOffsetColor();
 	}
-	 
+
+	public String getFamilyName() {
+		return familyName;
+	}
+
+	public void setFamilyName(String familyName) {
+		this.familyName = familyName;
+	}
+
+
+
 	private static class ColorLumComparator implements Comparator<Color> {
 
 		@Override

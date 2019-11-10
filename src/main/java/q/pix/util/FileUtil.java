@@ -41,42 +41,52 @@ public class FileUtil {
 	public static Optional<FamilyAffinity> loadConfigFiles(Set<Color> imageColors, File dir) {
 
 		List<FamilyAffinity> affinities = new ArrayList<>();
-		try {
-			for (File config : dir.listFiles()) {
-				BufferedReader in = new BufferedReader(new FileReader(config));
-				String line = in.readLine();
-				if (line.equals(FAMILY_DIVIDER)) { // it's a config file!
-					ColorFamily configFamily = new ColorFamily();
-					Set<Color> currentFamily = null;
-					while (line != null) {
-						if (FAMILY_DIVIDER.contentEquals(line)) {
-							if (currentFamily != null) {
-								configFamily.addGroup(currentFamily);
-							}
-							currentFamily = new HashSet<>();
-						} else {
-							String[] colorStr = line.split(",");
-							currentFamily.add(new Color(Integer.parseInt(colorStr[0]), Integer.parseInt(colorStr[1]),
-									Integer.parseInt(colorStr[2])));
-						}
-						line = in.readLine();
-					}
-					affinities.add(ImageUtil.calculateColorGroupAffinity(imageColors, configFamily));
-				}
 
-				in.close();
+		for (File config : dir.listFiles()) {
+			Optional<ColorFamily> family = loadConfig(config);
+			if (family.isPresent()) {
+				affinities.add(new FamilyAffinity(imageColors, family.get()));
 			}
-		} catch (Exception e) {
-
 		}
 
-		if (affinities.size() > 0) {
+		if (affinities.size() > 0)
+
+		{
 			Collections.sort(affinities);
 			if (affinities.get(0).isMatchingAffinity(imageColors)) {
 				return Optional.of(affinities.get(0));
 			}
 		}
 
+		return Optional.empty();
+	}
+
+	public static Optional<ColorFamily> loadConfig(File file) {
+		try {
+			BufferedReader in = new BufferedReader(new FileReader(file));
+			String line = in.readLine();
+			ColorFamily configFamily = new ColorFamily(file.getName());
+			if (line.equals(FAMILY_DIVIDER)) { // it's a config file!
+				Set<Color> currentFamily = null;
+				while (line != null) {
+					if (FAMILY_DIVIDER.contentEquals(line)) {
+						if (currentFamily != null) {
+							configFamily.addGroup(currentFamily);
+						}
+						currentFamily = new HashSet<>();
+					} else {
+						String[] colorStr = line.split(",");
+						currentFamily.add(new Color(Integer.parseInt(colorStr[0]), Integer.parseInt(colorStr[1]),
+								Integer.parseInt(colorStr[2])));
+					}
+					line = in.readLine();
+				}
+				in.close();
+				return Optional.of(configFamily);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return Optional.empty();
 	}
 
@@ -97,21 +107,20 @@ public class FileUtil {
 			ex.printStackTrace();
 		}
 	}
-	
+
 	public static File getFamilyConfigDir(File from) {
 		String basePath = from.getAbsolutePath();
-		if(from.getName().endsWith(".png")) {
+		if (from.getName().endsWith(".png")) {
 			basePath = basePath.substring(0, from.getAbsolutePath().lastIndexOf(File.separator));
 		}
-		basePath = basePath.substring(0, basePath.length()-1);
+		basePath = basePath.substring(0, basePath.length() - 1);
 		basePath = basePath.substring(0, basePath.lastIndexOf(File.separator));
-		File configDir = new File(basePath+File.separator+"colorFamilies");
-		if(!configDir.exists()) {
+		File configDir = new File(basePath + File.separator + "colorFamilies");
+		if (!configDir.exists()) {
 			configDir.mkdir();
 		}
 
 		return configDir;
 	}
-
 
 }
