@@ -18,19 +18,22 @@ import q.pix.util.ImageUtil;
 
 public class PaintingQueue {
 	// private Map<String, ColorFamily> needsFamilyPainting;
-	List<ColorFamily> colorFamilies;
+	private List<ColorFamily> colorFamilies;
 	private ColorFamily currentFamily;
 	private String inputFileName;
 	private Iterator<File> files;
 	private BiConsumer<BufferedImage, ColorFamily> imageConsumer;
-
+	private File configDir;
+	
+	
 	public PaintingQueue() {
 		// needsFamilyPainting = new HashMap<>();
 	}
 
 	public void setup(File inputDir, File savedFamiliesDir, BiConsumer<BufferedImage, ColorFamily> imageDestination) {
 		try {
-			setColorFamilies(loadConfigs(savedFamiliesDir));
+			setConfigDir(savedFamiliesDir);
+			setColorFamilies(loadConfigs());
 
 			queueImages(inputDir, imageDestination);
 
@@ -39,9 +42,9 @@ public class PaintingQueue {
 		}
 	}
 
-	private List<ColorFamily> loadConfigs(File configDir) {
+	private List<ColorFamily> loadConfigs() {
 		List<ColorFamily> families = new ArrayList<>();
-		for (File configFile : configDir.listFiles()) {
+		for (File configFile : getConfigDir().listFiles()) {
 			Optional<ColorFamily> config = FileUtil.loadConfig(configFile);
 			if (config.isPresent()) {
 				families.add(config.get());
@@ -59,6 +62,7 @@ public class PaintingQueue {
 	public void queueStep(boolean placeholder) {
 		while (getFiles().hasNext()) {
 			try {
+				setColorFamilies(loadConfigs());
 				File imgFile = getFiles().next();
 				setInputFileName(imgFile.getName());
 				BufferedImage img = ImageIO.read(imgFile);
@@ -74,7 +78,8 @@ public class PaintingQueue {
 					setCurrentFamily(closestFamily.getColorFamily());
 				}
 
-				System.out.println(imgFile.getName()+" with color family "+getCurrentFamily().getFamilyName());
+				System.out.println(imgFile.getName()+" with color family "+getCurrentFamily().getFamilyName()+" match rate of "+closestFamily.calcFamilyColorPct(imgColors));
+				System.out.println("Not in family: "+closestFamily.getMissingColors(imgColors));
 				BufferedImage inputImage = ImageUtil.loadAndScale(imgFile);
 				getImageConsumer().accept(inputImage, getCurrentFamily());
 				return;
@@ -82,6 +87,7 @@ public class PaintingQueue {
 				e.printStackTrace();
 			}
 		}
+		System.out.println("All done!");
 	}
 
 	public BiConsumer<BufferedImage, ColorFamily> getImageConsumer() {
@@ -123,5 +129,15 @@ public class PaintingQueue {
 	private void setColorFamilies(List<ColorFamily> colorFamilies) {
 		this.colorFamilies = colorFamilies;
 	}
+
+	public File getConfigDir() {
+		return configDir;
+	}
+
+	public void setConfigDir(File configDir) {
+		this.configDir = configDir;
+	}
+
+
 
 }

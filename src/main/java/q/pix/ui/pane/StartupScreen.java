@@ -182,18 +182,27 @@ public class StartupScreen extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					JFileChooser fc = new JFileChooser();
-					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-					int returnVal = fc.showOpenDialog(StartupScreen.this);
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
 
+					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath()+"_target");
+					File familyInputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath()+"_input");
+					if(familyInputsDir.exists() || shadedOutputsDir.exists()) {
+						throw new IllegalArgumentException("Can't ovewrite a family paint dir");
+					}
+					shadedOutputsDir.mkdir();
+					familyInputsDir.mkdir();
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
-						File dir = FileUtil.getFamilyConfigDir(fc.getSelectedFile());
-						for (File imageFile : fc.getSelectedFile().listFiles((dirf, name) -> name.endsWith(".png"))) {
+						File dir = FileUtil.getFamilyConfigDir(inputChooser.getSelectedFile());
+						for (File imageFile : inputChooser.getSelectedFile().listFiles((dirf, name) -> name.endsWith(".png"))) {
 							BufferedImage image = ImageIO.read(imageFile);
 							Optional<FamilyAffinity> bestConfigMatch = FileUtil
 									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
 							ImageUtil.paintToFamily(ImageUtil.initColorGroupColors(), imageFile,
-									bestConfigMatch.get().getColorFamily());
+									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
+							ImageUtil.paintInput(ImageUtil.initColorGroupColors(), imageFile,
+									bestConfigMatch.get().getColorFamily(), familyInputsDir);
 						}
 					}
 				} catch (Exception ex) {

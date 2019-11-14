@@ -82,6 +82,10 @@ public class FileUtil {
 					line = in.readLine();
 				}
 				in.close();
+				for(int i=configFamily.size();i<8;i++) {
+					configFamily.addGroup(new HashSet<>());
+				}
+				
 				return Optional.of(configFamily);
 			}
 		} catch (Exception e) {

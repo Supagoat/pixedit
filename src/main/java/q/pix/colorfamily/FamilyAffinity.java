@@ -40,9 +40,21 @@ public class FamilyAffinity implements Comparable<FamilyAffinity> {
 	}
 
 	public boolean isMatchingAffinity(Set<Color> colors) {
-		Long inFamily = colors.stream().filter(c -> getColorFamily().isInFamily(c)).collect(Collectors.counting());
-		return inFamily == null ? false : inFamily.doubleValue()/colors.size() > 0.75;
+		return calcFamilyColorPct(colors) > 0.6;
 	}
+	
+	public double calcFamilyColorPct(Set<Color> colors) {
+		 return countColorsInFamilty(colors).doubleValue()/colors.size();
+	}
+	
+	public Long countColorsInFamilty(Set<Color> colors) {
+		return colors.stream().filter(c -> getColorFamily().isInFamily(c)).collect(Collectors.counting());
+	}
+	
+	public List<Color> getMissingColors(Set<Color> colors) {
+		return colors.stream().filter(c -> !getColorFamily().isInFamily(c)).collect(Collectors.toList());
+	}
+	
 	
 	public int getMatchCount() {
 		return matchCount;

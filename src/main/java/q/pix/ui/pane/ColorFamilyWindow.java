@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -36,8 +37,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	private JButton zoomInButton;
 	private JButton zoomOutButton;
-	private JButton penIncreaseButton;
-	private JButton penDecreaseButton;
 	private JButton saveButton;
 	private Optional<Integer> backgroundColor = Optional.empty();
 	private boolean drawOutsideLines;
@@ -49,6 +48,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	private int currentColorFamily;
 	private Consumer<Boolean> onSaveCallback;
 	List<Color> colorGroupColors;
+	private List<JButton> colorFamilyButtons;
 
 	private KeyListener listener = new KeyListener() {
 		@Override
@@ -85,7 +85,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		getTopPanel().add(setZoomInButton(makeZoomButton("Z+", 1)));
 		getTopPanel().add(setZoomOutButton(makeZoomButton("Z-", -1)));
 		add(getTopPanel(), BorderLayout.PAGE_START);
-
+		colorFamilyButtons = new ArrayList<>();
 		colorGroupColors = ImageUtil.initColorGroupColors();
 
 		setColorPanel(new JPanel());
@@ -124,25 +124,20 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			add(newPanel, BorderLayout.CENTER);
 			addListener(newPanel);
 			newPanel.setZoomLevel(4);
-		} else {
-
-			// getGraphicsPanel().setInputImage(newPanel.getInputImage());
-
-		}
-
+		} 
 		redrawOutput();
 
 		return this;
 	}
 
 	public void setNewImage(BufferedImage inputImage, ColorFamily family) {
-		// setGraphicsPanel(new ColorFamilyPickerDisplay(this, inputImage));
+
 		setColorFamily(family);
 		getGraphicsPanel().setInputImage(inputImage);
 		getGraphicsPanel().setTargetImage(ImageUtil.copyImage(inputImage));
 
 		// dispPanel.setBackgroundColor(inputImage); // I SHOULDUSE THIS FOR THE GREEN
-		// REMOVAL
+
 		redrawOutput();
 	}
 
@@ -210,6 +205,11 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			group.remove(c);
 		}
 		getColorFamily().get(getCurrentColorFamily()).add(c);
+		
+		Set<Color> imageColors = ImageUtil.getDistinctColors(getGraphicsPanel().getTargetImage());
+		FamilyAffinity affinity = new FamilyAffinity(imageColors, getColorFamily());
+		System.out.println("Still to go: "+affinity.getMissingColors(imageColors));
+		
 		redrawOutput();
 	}
 
@@ -254,32 +254,12 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return zoomOutButton;
 	}
 
-	private JButton getPenIncreaseButton() {
-		return penIncreaseButton;
-	}
-
-	private JButton setPenIncreaseButton(JButton penIncreaseButton) {
-		this.penIncreaseButton = penIncreaseButton;
-		return penIncreaseButton;
-	}
-
-	private JButton getPenDecreaseButton() {
-		return penDecreaseButton;
-	}
-
-	private JButton setPenDecreaseButton(JButton penDecreaseButton) {
-		this.penDecreaseButton = penDecreaseButton;
-		return penDecreaseButton;
-	}
-
 	public Optional<Integer> getBackgroundColor() {
 		return backgroundColor;
 	}
 
 	public void setBackgroundColor(int backgroundColor) {
 		this.backgroundColor = Optional.of(backgroundColor);
-		// getColorPanel().add(makeColorButton("Erase", new
-		// Color(getBackgroundColor().get())));
 	}
 
 	public JButton getActiveColor() {
@@ -353,5 +333,15 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	public void setOnSaveCallback(Consumer<Boolean> onSaveCallback) {
 		this.onSaveCallback = onSaveCallback;
 	}
+
+	public List<JButton> getColorFamilyButtons() {
+		return colorFamilyButtons;
+	}
+
+	public void setColorFamilyButtons(List<JButton> colorFamilyButtons) {
+		this.colorFamilyButtons = colorFamilyButtons;
+	}
+	
+	
 
 }

@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ColorFamily {
 	private List<Set<Color>> colorGroups;
@@ -50,6 +51,7 @@ public class ColorFamily {
 		return colors.stream().allMatch(c -> isInFamily(c));
 	}
 	
+
 	public int getColorGroup(Color c) {
 		for (int i=0;i<getColorGroups().size();i++) {
 			if (getColorGroups().get(i).contains(c)) {

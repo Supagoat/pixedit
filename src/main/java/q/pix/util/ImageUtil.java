@@ -23,6 +23,8 @@ import q.pix.colorfamily.SimilarColors;
 public class ImageUtil {
 	public static final int IMAGE_WIDTH = 256;
 	public static final int IMAGE_HEIGHT = 256;
+	public static final int CROPPABLE_IMAGE_WIDTH = 286;
+	public static final int CROPPABLE_IMAGE_HEIGHT = 286;
 	public static final Color GREEN_BG = new Color(0, 255, 0);
 
 	public static BufferedImage loadAndScale(File imageFile) {
@@ -106,15 +108,23 @@ public class ImageUtil {
 					continue;
 				}
 			}
+			//BufferedImage inputImage = copyIntoCenter(ImageIO.read(input), blankImage(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT, GREEN_BG);
+			
 			BufferedImage inputImage = ImageIO.read(input);
 			BufferedImage targetImage = null;
 			if (target != null && target.exists()) {
 				targetImage = ImageIO.read(target);
 			} else {
-				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), Color.WHITE);
+				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
 			}
 			combineImage(targetImage, inputImage, outputDir, input.getName());
 		}
+	}
+	
+	public static BufferedImage copyIntoCenter(BufferedImage in, BufferedImage out, int xOffset, int yOffset) {
+		
+		
+		return out;
 	}
 
 	public static void combineImage(BufferedImage leftImage, BufferedImage rightImage, String outputDir,
@@ -241,9 +251,14 @@ public class ImageUtil {
 
 	}
 
-	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family) throws IOException {
+	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) throws IOException {
 		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
-		ImageIO.write(painted, "png", new File(inputFile.getAbsolutePath().replace(".png", "_family.png")));
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile()+File.separator+inputFile.getName()));
+	}
+	
+	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) throws IOException {
+		BufferedImage painted = paintInput(baseColors, ImageIO.read(inputFile), family);
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile()+File.separator+inputFile.getName()));
 	}
 
 	// Not using analyze colors right now because LAB still ends up grouping some
@@ -498,6 +513,22 @@ public class ImageUtil {
 				} else {
 					out.setRGB(x, y,
 							family.offsetLuminance(baseColors.get(family.getColorGroup(inputC)), inputC).getRGB());
+				}
+			}
+		}
+		return out;
+	}
+	
+	public static BufferedImage paintInput(List<Color> baseColors, BufferedImage input, ColorFamily family) {
+		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				if (isBackgroundColor(inputC.getRGB())) {
+					out.setRGB(x, y, inputC.getRGB());
+				} else {
+					out.setRGB(x, y,
+							baseColors.get(family.getColorGroup(inputC)).getRGB());
 				}
 			}
 		}
