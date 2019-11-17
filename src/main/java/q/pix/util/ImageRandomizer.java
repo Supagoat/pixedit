@@ -52,7 +52,7 @@ public class ImageRandomizer {
 					//target_out.getGraphics().drawImage(in_target, x, y, BLOCK_SIZE, BLOCK_SIZE, null);
 				}
 			}
-			ImageUtil.combineImage(target_out, in_out, outputDir, "gt_"+i+".png");
+			ImageUtil.combineImage(target_out, in_out, outputDir, "gt_"+i+".png", ImageUtil.IMAGE_WIDTH, ImageUtil.IMAGE_HEIGHT);
 		}
 	}
 	

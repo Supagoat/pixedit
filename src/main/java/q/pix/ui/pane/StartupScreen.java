@@ -1,5 +1,6 @@
 package q.pix.ui.pane;
 
+import java.awt.Color;
 import java.awt.GridLayout;
 import java.awt.TextArea;
 import java.awt.event.ActionEvent;
@@ -7,6 +8,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
@@ -35,11 +37,11 @@ public class StartupScreen extends JFrame {
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
-		setSize(1000, 300);
+		setSize(1000, 400);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-		getPanel().setLayout(new GridLayout(2, 2));
+		getPanel().setLayout(new GridLayout(3, 5));
 		getPanel().add(toTrainSetButton());
 		getPanel().add(generateButton());
 		getPanel().add(loadButton());
@@ -49,7 +51,7 @@ public class StartupScreen extends JFrame {
 		// getPanel().add(analyzeColorsButton()); // not using analyze right now
 		getPanel().add(colorFamilyButton());
 		getPanel().add(paintToFamilyButton());
-
+		getPanel().add(generateFamilyTrainSets());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -64,7 +66,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton toTrainSetButton() {
-		JButton makeSetButton = new JButton("Trainset");
+		JButton makeSetButton = new JButton("Create Trainset");
 		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -114,7 +116,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton loadButton() {
-		JButton loadButton = new JButton("Load");
+		JButton loadButton = new JButton("Load For Drawing");
 		loadButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -132,7 +134,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton outlineButton() {
-		JButton outlineButton = new JButton("Outline");
+		JButton outlineButton = new JButton("Outline Image");
 		outlineButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -155,7 +157,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton outlineDirButton() {
-		JButton outlineDirButton = new JButton("OutlineDir");
+		JButton outlineDirButton = new JButton("Outline Dir");
 		outlineDirButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -186,16 +188,17 @@ public class StartupScreen extends JFrame {
 					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
 
-					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath()+"_target");
-					File familyInputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath()+"_input");
-					if(familyInputsDir.exists() || shadedOutputsDir.exists()) {
+					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_target");
+					File familyInputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_input");
+					if (familyInputsDir.exists() || shadedOutputsDir.exists()) {
 						throw new IllegalArgumentException("Can't ovewrite a family paint dir");
 					}
 					shadedOutputsDir.mkdir();
 					familyInputsDir.mkdir();
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
 						File dir = FileUtil.getFamilyConfigDir(inputChooser.getSelectedFile());
-						for (File imageFile : inputChooser.getSelectedFile().listFiles((dirf, name) -> name.endsWith(".png"))) {
+						for (File imageFile : inputChooser.getSelectedFile()
+								.listFiles((dirf, name) -> name.endsWith(".png"))) {
 							BufferedImage image = ImageIO.read(imageFile);
 							Optional<FamilyAffinity> bestConfigMatch = FileUtil
 									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
@@ -203,6 +206,49 @@ public class StartupScreen extends JFrame {
 									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
 							ImageUtil.paintInput(ImageUtil.initColorGroupColors(), imageFile,
 									bestConfigMatch.get().getColorFamily(), familyInputsDir);
+						}
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					paintToFamilyButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return paintToFamilyButton;
+	}
+
+	private JButton generateFamilyTrainSets() {
+		JButton paintToFamilyButton = new JButton("Make Ind. Fam Trainsets");
+		paintToFamilyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+
+					File trainsetOutputDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_trainset");
+
+					if (trainsetOutputDir.exists()) {
+						throw new IllegalArgumentException("Can't ovewrite a trainset dir");
+					}
+					trainsetOutputDir.mkdir();
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File dir = FileUtil.getFamilyConfigDir(inputChooser.getSelectedFile());
+						for (File imageFile : inputChooser.getSelectedFile()
+								.listFiles((dirf, name) -> name.endsWith(".png"))) {
+							BufferedImage image = ImageIO.read(imageFile);
+							Optional<FamilyAffinity> bestConfigMatch = FileUtil
+									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
+							for (int i = 0; i < bestConfigMatch.get().getColorFamily().getColorGroups().size(); i++) {
+								Set<Color> colorGroup = bestConfigMatch.get().getColorFamily().getColorGroups().get(i);
+								if (!colorGroup.isEmpty()) {
+									// resize to 286x286 so p2p doesn't do scaling
+									ImageUtil.paintSingeGroup(i,  ImageUtil.copyIntoCenter(image, ImageUtil.blankImage(286,286,ImageUtil.GREEN_BG)), imageFile.getName(), trainsetOutputDir,
+											bestConfigMatch.get().getColorFamily());
+								}
+							}
 						}
 					}
 				} catch (Exception ex) {
@@ -262,51 +308,18 @@ public class StartupScreen extends JFrame {
 		return analyzeColorsButton;
 	}
 
-//	private JButton paintFromFamiliesButton() {
-//		JButton paintFromFamiliesButton = new JButton("Paint From Fam");
-//		paintFromFamiliesButton.addActionListener(new ActionListener() {
-//			@Override
-//			public void actionPerformed(ActionEvent e) {
-//				try {
-//					JFileChooser fc = new JFileChooser();
-//					fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
-//					int returnVal = fc.showOpenDialog(StartupScreen.this);
-//
-//					if (returnVal == JFileChooser.APPROVE_OPTION) {
-//						ImageUtil.analyzeColors(fc.getSelectedFile());
-//					}
-//				} catch (Exception ex) {
-//					handleError(ex);
-//					paintFromFamiliesButton.setText("ERROR: " + ex.toString());
-//				}
-//			}
-//		});
-//
-//		return paintFromFamiliesButton;
-//	}
-
 	private JButton colorFamilyButton() {
-		JButton colorFamilyButton = new JButton("Color Family");
+		JButton colorFamilyButton = new JButton("Assign Color Families");
 		colorFamilyButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser fc = new JFileChooser();
-				//fc.setFileFilter(new FileNameExtensionFilter("Supported Files", "jpg", "png", "pxd"));
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
 				File imageFile = null;
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					imageFile = fc.getSelectedFile();
 				}
-
-//				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-//				returnVal = fc.showOpenDialog(StartupScreen.this);
-//				File familiesConfigDir = null;
-//
-//				if (returnVal == JFileChooser.APPROVE_OPTION) {
-//					familiesConfigDir = fc.getSelectedFile();
-//				}
-
 				beginColorFamilyEdit(imageFile, FileUtil.getFamilyConfigDir(imageFile));
 
 			}
@@ -366,9 +379,9 @@ public class StartupScreen extends JFrame {
 			dispPanel.setOnSaveCallback(queue::queueStep);
 			dispPanel.display();
 			queue.setup(selectedDir, savedFamiliesDir, dispPanel::setNewImage);
-			dispPanel.makeSaveButton(queue::getCurrentFamily, savedFamiliesDir.getAbsolutePath(), queue::getInputFileName, queue::queueStep);
-			//dispPanel.setGraphicsPanel(new ColorFamilyPickerDisplay(dispPanel, dispPanel.));
-			
+			dispPanel.makeSaveButton(queue::getCurrentFamily, savedFamiliesDir.getAbsolutePath(),
+					queue::getInputFileName, queue::queueStep);
+
 			dispPanel.addWindowListener(new ReturnToStartupListener(this));
 
 			setVisible(false);

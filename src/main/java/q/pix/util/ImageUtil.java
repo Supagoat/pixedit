@@ -62,7 +62,7 @@ public class ImageUtil {
 	}
 
 	public static BufferedImage blankImage(int width, int height, Color backgroundColor) {
-		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
 		for (int x = 0; x < output.getWidth(); x++) {
 			for (int y = 0; y < output.getHeight(); y++) {
@@ -108,42 +108,67 @@ public class ImageUtil {
 					continue;
 				}
 			}
-			//BufferedImage inputImage = copyIntoCenter(ImageIO.read(input), blankImage(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT, GREEN_BG);
-			
-			BufferedImage inputImage = ImageIO.read(input);
-			BufferedImage targetImage = null;
-			if (target != null && target.exists()) {
-				targetImage = ImageIO.read(target);
+			BufferedImage inputImage;
+
+			if (blanksWhereMissing) {
+				inputImage = ImageIO.read(input);
 			} else {
-				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
+				inputImage = copyIntoCenter(ImageIO.read(input),
+						blankImage(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT, GREEN_BG));
 			}
-			combineImage(targetImage, inputImage, outputDir, input.getName());
+
+			BufferedImage targetImage = null;
+//			if (target != null && target.exists()) {
+//				targetImage = ImageIO.read(target);
+//			} else {
+//				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
+//			}
+
+			if (blanksWhereMissing) {
+				if (target != null && target.exists()) {
+					targetImage = ImageIO.read(target);
+				} else {
+					targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
+				}
+			} else {
+				targetImage = copyIntoCenter(ImageIO.read(target),
+						blankImage(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT, GREEN_BG));
+			}
+
+			int width = blanksWhereMissing ? IMAGE_WIDTH : inputImage.getWidth();
+			int height = blanksWhereMissing ? IMAGE_HEIGHT : inputImage.getHeight();
+			combineImage(targetImage, inputImage, outputDir, input.getName(), width, height);
 		}
 	}
-	
-	public static BufferedImage copyIntoCenter(BufferedImage in, BufferedImage out, int xOffset, int yOffset) {
-		
-		
+
+	public static BufferedImage copyIntoCenter(BufferedImage in, BufferedImage out) {
+		int xOffset = (out.getWidth() - in.getWidth()) / 2;
+		int yOffset = (out.getHeight() - in.getHeight()) / 2;
+
+		for (int y = 0; y < in.getWidth(); y++) {
+			for (int x = 0; x < in.getWidth(); x++) {
+				out.setRGB(x + xOffset, y + yOffset, in.getRGB(x, y));
+			}
+		}
 		return out;
 	}
 
 	public static void combineImage(BufferedImage leftImage, BufferedImage rightImage, String outputDir,
-			String outputNameBase) throws IOException {
+			String outputNameBase, int imageWidth, int imageHeight) throws IOException {
 
-		int cols = leftImage.getWidth() > IMAGE_WIDTH ? leftImage.getWidth() / (IMAGE_WIDTH / 2) : 1;
-		int rows = leftImage.getHeight() > IMAGE_HEIGHT ? leftImage.getHeight() / (IMAGE_HEIGHT / 2) : 1;
+		int cols = leftImage.getWidth() > imageWidth ? leftImage.getWidth() / (imageWidth / 2) : 1;
+		int rows = leftImage.getHeight() > imageHeight ? leftImage.getHeight() / (imageHeight / 2) : 1;
 
 		for (int c = 0; c < cols; c++) {
 			for (int r = 0; r < rows; r++) {
-				BufferedImage output = new BufferedImage(IMAGE_WIDTH * 2, IMAGE_HEIGHT, BufferedImage.TYPE_INT_RGB);
-				output.getGraphics().drawImage(leftImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, c * IMAGE_WIDTH / 2,
-						r * IMAGE_HEIGHT / 2, c * IMAGE_WIDTH / 2 + IMAGE_WIDTH, r * IMAGE_HEIGHT / 2 + IMAGE_HEIGHT,
-						null);
-				output.getGraphics().drawImage(rightImage, IMAGE_WIDTH, 0, IMAGE_WIDTH * 2, IMAGE_HEIGHT,
-						c * IMAGE_WIDTH / 2, r * IMAGE_HEIGHT / 2, c * IMAGE_WIDTH / 2 + IMAGE_WIDTH,
-						r * IMAGE_HEIGHT / 2 + IMAGE_HEIGHT, null);
+				BufferedImage output = new BufferedImage(imageWidth * 2, imageHeight, BufferedImage.TYPE_INT_RGB);
+				output.getGraphics().drawImage(leftImage, 0, 0, imageWidth, imageHeight, c * imageWidth / 2,
+						r * imageHeight / 2, c * imageWidth / 2 + imageWidth, r * imageHeight / 2 + imageHeight, null);
+				output.getGraphics().drawImage(rightImage, imageWidth, 0, imageWidth * 2, imageHeight,
+						c * imageWidth / 2, r * imageHeight / 2, c * imageWidth / 2 + imageWidth,
+						r * imageHeight / 2 + imageHeight, null);
 				String namePrefix = (cols == 1 && rows == 1) ? ""
-						: "_" + c * IMAGE_WIDTH / 2 + "_" + r * IMAGE_HEIGHT / 2 + "_";
+						: "_" + c * imageWidth / 2 + "_" + r * imageWidth / 2 + "_";
 				ImageIO.write(output, "png", new File(outputDir + File.separator + namePrefix + outputNameBase));
 			}
 		}
@@ -151,14 +176,22 @@ public class ImageUtil {
 	}
 
 	public static BufferedImage copyImage(BufferedImage input) {
-		BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), input.getType());
+		return copyImage(input, 0, 0);
+	}
 
-		for (int x = 0; x < output.getWidth(); x++) {
-			for (int y = 0; y < output.getHeight(); y++) {
-				output.setRGB(x, y, input.getRGB(x, y));
+	public static BufferedImage copyImage(BufferedImage input, int xOffset, int yOffset) {
+		BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), input.getType());
+		return copyImage(input, output, xOffset, yOffset);
+	}
+
+	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset) {
+		for (int x = 0; x < input.getWidth(); x++) {
+			for (int y = 0; y < input.getHeight(); y++) {
+				output.setRGB(x + xOffset, y + yOffset, input.getRGB(x, y));
 			}
 		}
 		return output;
+
 	}
 
 	public static void makeTrainSet(String dir) throws IOException {
@@ -251,14 +284,24 @@ public class ImageUtil {
 
 	}
 
-	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) throws IOException {
-		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
-		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile()+File.separator+inputFile.getName()));
+	public static void paintFamilyTrainings(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) {
+		for (Set<Color> groupColors : family.getColorGroups()) {
+			if (!groupColors.isEmpty()) {
+
+			}
+		}
 	}
-	
-	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) throws IOException {
+
+	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir)
+			throws IOException {
+		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator + inputFile.getName()));
+	}
+
+	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir)
+			throws IOException {
 		BufferedImage painted = paintInput(baseColors, ImageIO.read(inputFile), family);
-		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile()+File.separator+inputFile.getName()));
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator + inputFile.getName()));
 	}
 
 	// Not using analyze colors right now because LAB still ends up grouping some
@@ -447,7 +490,7 @@ public class ImageUtil {
 	public static int getColorGroupIndex(ColorFamily colorFamily, Color c) {
 		for (int i = 0; i < colorFamily.size(); i++) {
 			if (colorFamily.get(i).contains(c)) {
-				if(i > 8) {
+				if (i > 8) {
 					return i;
 				}
 				return i;
@@ -503,6 +546,39 @@ public class ImageUtil {
 		return colorGroupColors;
 	}
 
+	// Uses the input image's size to base 
+	public static void paintSingeGroup(int familyColorGroupIdx, BufferedImage input, String inputName, File outputDir,
+			ColorFamily family) throws IOException {
+		BufferedImage out = new BufferedImage(input.getWidth() * 2, input.getHeight(), input.getType());
+		//copyImage(paintInput(initColorGroupColors(), input, family), out, input.getWidth(), 0);
+		List<Color> baseColors = initColorGroupColors();
+		
+		Optional<BufferedImage> groupColorPainted = paintSingleGroupInput(baseColors.get(0), paintInput(initColorGroupColors(), input, family), baseColors.get(familyColorGroupIdx));
+		
+		if(groupColorPainted.isEmpty()) {
+			return; // don't output an empty training image
+		}
+		
+		copyImage(groupColorPainted.get(), out, input.getWidth(), 0);
+		copyImage(paintSingeGroup(family.get(familyColorGroupIdx), input, family), out, 0, 0);
+		
+		ImageIO.write(out, "png", new File(outputDir + File.separator + inputName.replace(".png", "_cg"+familyColorGroupIdx+".png")));
+	}
+
+	public static BufferedImage paintSingeGroup(Set<Color> groupColors, BufferedImage input, ColorFamily family) {
+		Color baseColor = initColorGroupColors().get(0);
+		BufferedImage out = blankImage(input.getWidth(), input.getHeight(), new Color(input.getRGB(0, 0)));
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				if (groupColors.contains(inputC)) {
+					out.setRGB(x, y, family.offsetLuminance(baseColor, inputC).getRGB());
+				}
+			}
+		}
+		return out;
+	}
+
 	public static BufferedImage paintToFamily(List<Color> baseColors, BufferedImage input, ColorFamily family) {
 		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
 		for (int y = 0; y < out.getHeight(); y++) {
@@ -518,6 +594,22 @@ public class ImageUtil {
 		}
 		return out;
 	}
+
+	// Returns Optional.empty if the input image didn't contain the family group specified by groupColor
+	public static Optional<BufferedImage> paintSingleGroupInput(Color outputColor, BufferedImage input, Color groupColor) {
+		BufferedImage out = blankImage(input.getWidth(), input.getHeight(),GREEN_BG);
+		boolean containsColor = false;
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				if (groupColor.equals(inputC)) {
+					containsColor = true;
+					out.setRGB(x, y, outputColor.getRGB());//baseColors.get(family.getColorGroup(inputC)).getRGB());
+				}
+			}
+		}
+		return containsColor ? Optional.ofNullable(out) : Optional.empty();
+	}
 	
 	public static BufferedImage paintInput(List<Color> baseColors, BufferedImage input, ColorFamily family) {
 		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -527,8 +619,7 @@ public class ImageUtil {
 				if (isBackgroundColor(inputC.getRGB())) {
 					out.setRGB(x, y, inputC.getRGB());
 				} else {
-					out.setRGB(x, y,
-							baseColors.get(family.getColorGroup(inputC)).getRGB());
+					out.setRGB(x, y, baseColors.get(family.getColorGroup(inputC)).getRGB());
 				}
 			}
 		}
