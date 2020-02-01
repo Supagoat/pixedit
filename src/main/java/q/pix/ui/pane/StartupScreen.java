@@ -7,6 +7,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -52,6 +54,9 @@ public class StartupScreen extends JFrame {
 		getPanel().add(colorFamilyButton());
 		getPanel().add(paintToFamilyButton());
 		getPanel().add(generateFamilyTrainSets());
+		getPanel().add(paintToFamilyIterationButton());
+		getPanel().add(reduceColorButton());
+		getPanel().add(sliceImageButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -178,6 +183,11 @@ public class StartupScreen extends JFrame {
 		return outlineDirButton;
 	}
 
+	/**
+	 * Creates a set of inputs and outputs for the families with input being the
+	 * base family color and output being the pixels in the shaded family colors
+	 * 
+	 */
 	private JButton paintToFamilyButton() {
 		JButton paintToFamilyButton = new JButton("Paint To Family");
 		paintToFamilyButton.addActionListener(new ActionListener() {
@@ -203,9 +213,9 @@ public class StartupScreen extends JFrame {
 							Optional<FamilyAffinity> bestConfigMatch = FileUtil
 									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
 							ImageUtil.paintToFamily(ImageUtil.initColorGroupColors(), imageFile,
-									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
+									bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "");
 							ImageUtil.paintInput(ImageUtil.initColorGroupColors(), imageFile,
-									bestConfigMatch.get().getColorFamily(), familyInputsDir);
+									bestConfigMatch.get().getColorFamily(), familyInputsDir, "");
 						}
 					}
 				} catch (Exception ex) {
@@ -218,6 +228,116 @@ public class StartupScreen extends JFrame {
 		return paintToFamilyButton;
 	}
 
+	public JButton reduceColorButton() {
+		JButton reduceColorButton = new JButton("Reduce Colors On Waifus");
+		reduceColorButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+
+					File inputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					File outputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_reduced");
+
+					//outputsDir.mkdir();
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						Set<String> seenPrefixes = new HashSet<>();
+
+						for (File prefixFinder : inputChooser.getSelectedFile()
+								.listFiles((dirf, name) -> name.endsWith(".png"))) {
+
+							String prefix = prefixFinder.getName().substring(0,
+									prefixFinder.getName().indexOf("split"));
+							if (!seenPrefixes.contains(prefix)) {
+								File[] matching = inputChooser.getSelectedFile()
+										.listFiles((dirf, name) -> name.startsWith(prefix) && name.endsWith(".png"));
+								Set<Color> batchColors = new HashSet<>();
+								System.out.println("Working on set "+prefix);
+								for (File imageFile : matching) {
+									BufferedImage image = ImageIO.read(imageFile);
+									batchColors.addAll(ImageUtil.getDistinctColors(image));
+								}
+								System.out.println("Found "+batchColors.size()+" colors");
+								// Divide them up into families automatically then select 18, ignoring green background to make 19
+								ImageUtil.analyzeColors(batchColors);
+							}
+						}
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					reduceColorButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return reduceColorButton;
+	}
+
+	private JButton paintToFamilyIterationButton() {
+		JButton paintToFamilyButton = new JButton("Paint To Family Iteration");
+		paintToFamilyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+
+					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_target");
+					File familyInputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_input");
+					if (familyInputsDir.exists() || shadedOutputsDir.exists()) {
+						throw new IllegalArgumentException("Can't ovewrite a family paint dir");
+					}
+					shadedOutputsDir.mkdir();
+					familyInputsDir.mkdir();
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File dir = FileUtil.getFamilyConfigDir(inputChooser.getSelectedFile());
+						for (File imageFile : inputChooser.getSelectedFile()
+								.listFiles((dirf, name) -> name.endsWith(".png"))) {
+							BufferedImage image = ImageIO.read(imageFile);
+							Optional<FamilyAffinity> bestConfigMatch = FileUtil
+									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
+							List<List<Color>> baseColors = ImageUtil.generateColorCombos(
+									ImageUtil.initColorGroupColors(), bestConfigMatch.get().getColorFamily());
+							for (int i = 0; i < baseColors.size(); i++) {
+//							ImageUtil.paintToFamilyColorIteration(baseColors.get(i), imageFile,
+//									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
+								ImageUtil.paintToFamily(baseColors.get(i), imageFile,
+										bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "f" + i);
+								ImageUtil.paintInput(baseColors.get(i), imageFile,
+										bestConfigMatch.get().getColorFamily(), familyInputsDir, "f" + i);
+							}
+						}
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					paintToFamilyButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return paintToFamilyButton;
+
+	}
+
+	/**
+	 * 
+	 * Creates BtoA trainsets of size 576x286 by iterating over every color group of
+	 * a family found in each image and outputs a group-single-color to
+	 * shaded-group-color training set for each group.
+	 * 
+	 * In other words, if an image contains 3 color groups then it will output 3
+	 * training images, each input/output will be the same base
+	 * color(colorGroupColors index 0, currently a red). The family base colors are
+	 * basically just used as layer masks and their family colors are ignored for
+	 * the purpose of this. This is based on the idea that the family colors aren't
+	 * relevant and the model should learn to paint consistenly regardless of which
+	 * family it's painting. Inputs to generation will need to be similarly split
+	 * and then re-assembled after generation.
+	 * 
+	 */
 	private JButton generateFamilyTrainSets() {
 		JButton paintToFamilyButton = new JButton("Make Ind. Fam Trainsets");
 		paintToFamilyButton.addActionListener(new ActionListener() {
@@ -245,7 +365,10 @@ public class StartupScreen extends JFrame {
 								Set<Color> colorGroup = bestConfigMatch.get().getColorFamily().getColorGroups().get(i);
 								if (!colorGroup.isEmpty()) {
 									// resize to 286x286 so p2p doesn't do scaling
-									ImageUtil.paintSingeGroup(i,  ImageUtil.copyIntoCenter(image, ImageUtil.blankImage(286,286,ImageUtil.GREEN_BG)), imageFile.getName(), trainsetOutputDir,
+									ImageUtil.paintSingeGroup(i,
+											ImageUtil.copyIntoCenter(image,
+													ImageUtil.blankImage(286, 286, ImageUtil.GREEN_BG)),
+											imageFile.getName(), trainsetOutputDir,
 											bestConfigMatch.get().getColorFamily());
 								}
 							}
@@ -262,7 +385,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton splitButton() {
-		JButton splitButton = new JButton("Split");
+		JButton splitButton = new JButton("Split Sprites");
 		splitButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -272,7 +395,7 @@ public class StartupScreen extends JFrame {
 					int returnVal = fc.showOpenDialog(StartupScreen.this);
 
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
-						ImageUtil.splitImages(fc.getSelectedFile());
+						ImageUtil.splitSprites(fc.getSelectedFile());
 						splitButton.setText("DONE");
 					}
 				} catch (Exception ex) {
@@ -328,6 +451,36 @@ public class StartupScreen extends JFrame {
 		return colorFamilyButton;
 	}
 
+	private JButton sliceImageButton() {
+		JButton generateButton = new JButton("Slice File");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File inputDir = fc.getSelectedFile();
+					 fc = new JFileChooser();
+						fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+						returnVal = fc.showOpenDialog(StartupScreen.this);
+						File outputDir = fc.getSelectedFile();
+					try {
+						generateButton.setText("Slicing....");
+						ImageUtil.sliceImages(inputDir, outputDir);
+						generateButton.setText("SliceImage");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return generateButton;
+	}
+	
 	private void handleError(Exception e) {
 		e.printStackTrace();
 		getPanel().add(new TextArea(e.toString()));

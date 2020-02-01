@@ -7,7 +7,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -23,8 +25,8 @@ import q.pix.colorfamily.SimilarColors;
 public class ImageUtil {
 	public static final int IMAGE_WIDTH = 256;
 	public static final int IMAGE_HEIGHT = 256;
-	public static final int CROPPABLE_IMAGE_WIDTH = 286;
-	public static final int CROPPABLE_IMAGE_HEIGHT = 286;
+	public static final int CROPPABLE_IMAGE_WIDTH = 256;
+	public static final int CROPPABLE_IMAGE_HEIGHT = 256;
 	public static final Color GREEN_BG = new Color(0, 255, 0);
 
 	public static BufferedImage loadAndScale(File imageFile) {
@@ -33,6 +35,13 @@ public class ImageUtil {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public static BufferedImage downscaleTo(BufferedImage input, int width, int height) {
+		if (input.getWidth() > width || input.getHeight() > height) {
+			return Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, width, height);
+		}
+		return input;
 	}
 
 	public static BufferedImage downscale(BufferedImage input) {
@@ -118,11 +127,6 @@ public class ImageUtil {
 			}
 
 			BufferedImage targetImage = null;
-//			if (target != null && target.exists()) {
-//				targetImage = ImageIO.read(target);
-//			} else {
-//				targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
-//			}
 
 			if (blanksWhereMissing) {
 				if (target != null && target.exists()) {
@@ -187,7 +191,12 @@ public class ImageUtil {
 	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset) {
 		for (int x = 0; x < input.getWidth(); x++) {
 			for (int y = 0; y < input.getHeight(); y++) {
-				output.setRGB(x + xOffset, y + yOffset, input.getRGB(x, y));
+				//System.out.println("XY: "+x+","+y+" offset "+xOffset+","+yOffset+" WH: "+input.getWidth()+","+input.getHeight()+" op: "+output.getWidth()+","+output.getHeight());
+				if(x < input.getWidth() && y < input.getHeight()) {
+					output.setRGB(x + xOffset, y + yOffset, input.getRGB(x, y));
+				} else {
+					output.setRGB(x + xOffset, y + yOffset, GREEN_BG.getRGB());
+				}
 			}
 		}
 		return output;
@@ -224,7 +233,10 @@ public class ImageUtil {
 		return Optional.empty();
 	}
 
-	public static void splitImages(File inputDir) throws IOException {
+	/**
+	 * Splits out each sprite in the images in the input dir into its own file
+	 */
+	public static void splitSprites(File inputDir) throws IOException {
 		File[] files = inputDir.listFiles();
 		File outDir = new File(inputDir.getAbsolutePath() + File.separator + "splitOut");
 		File smallOutputDir = new File(inputDir.getAbsolutePath() + File.separator + "splitOut_small");
@@ -235,12 +247,15 @@ public class ImageUtil {
 
 		for (File file : files) {
 			if (file.getName().endsWith("png")) {
-				splitFile(file, outDir.getAbsolutePath());
+				splitSpriteFile(file, outDir.getAbsolutePath());
 			}
 		}
 	}
 
-	public static void splitFile(File inputFile, String outputDir) throws IOException {
+	/**
+	 * Splits out each sprite in the image into its own file
+	 */
+	public static void splitSpriteFile(File inputFile, String outputDir) throws IOException {
 		try {
 
 			BufferedImage in = ImageIO.read(inputFile);
@@ -284,6 +299,127 @@ public class ImageUtil {
 
 	}
 
+	public static void sliceImages(File inputDir, File outputDir) throws IOException {
+		for (File f : inputDir.listFiles()) {
+			BufferedImage input = ImageIO.read(f);
+			sliceImage(input, f.getName(), outputDir);
+		}
+	}
+
+	/**
+	 * Splits an image into sub-images. If border is requested the full image will
+	 * be shrunk and put around the border in 10 pixels
+	 * 
+	 * @param input
+	 * @param width
+	 * @param height
+	 * @param doBorder
+	 */
+	public static void sliceImage(BufferedImage input, String inputName, File outputDir) throws IOException {
+		BufferedImage downscaled = downscaleTo(input, 100, 100); // need to go do the math but this is for 256x256
+		
+		int y=0;
+		while (y < input.getHeight()) {
+			int x = 0;
+			while (x < input.getWidth()) {
+				int w = (x+256) < input.getWidth() ? 256 : (x+256)-input.getWidth();
+				int h = (y+256) < input.getHeight() ? 256 : (y+256)-input.getHeight();
+				BufferedImage slice = blankImage();
+				copyImage(input.getSubimage(x, y, w, h), slice, 0, 0);
+				doBorder(downscaled, slice);
+				ImageIO.write(slice, "png",
+						new File(outputDir + File.separator + inputName.replace(".png", "_"+x+"_"+y + ".png")));
+				x += 256;
+			}
+			y += 256;
+		}
+	}
+
+//	public static void doBorder(BufferedImage source, BufferedImage destination) {
+//		Point destXYDir = new Point(10,0);
+//		int destX = 0;
+//		int destY = 0;
+//		int y=0;
+//		while(y < source.getHeight()) {
+//			int x = 0;
+//			while(x < source.getWidth()) {
+//				BufferedImage subImage = source.getSubimage(x,y,x+10, y+10);
+//				copyImage(subImage, destination, destX, destY);
+//				destX+=destXYDir.x;
+//				destY+=destXYDir.y;
+//				
+//				destX = destX > 236 ? 226 : destX; // bottom right
+//				destX = destX < 0 ? 0 : destX; // bottom left
+//				
+//				x+=10;
+//			}
+//			y+=10;
+//		}
+//
+//	}
+
+	public static void doBorder(BufferedImage borderSource, BufferedImage destination) {
+		int frameCt = 0;
+		int sourceY = 0;
+		int iteration = 0;
+		while (sourceY < borderSource.getHeight()-9) {
+			int sourceX = 0;
+			while (sourceX < borderSource.getWidth()-9) {
+				BufferedImage subImage = borderSource.getSubimage(sourceX, sourceY,  10, 10);
+
+				Point dest = getXYCoords(iteration);
+				System.out.println("To dest "+iteration+" "+dest+" against source "+sourceX+" ,"+sourceY);
+				copyImage(subImage, destination, dest.x, dest.y);
+
+				sourceX += 10;
+				sourceX = frameCt % 7 == 0 ? sourceX + 1 : sourceX;
+				iteration++;
+			}
+			sourceY += 10;
+			sourceY = frameCt % 7 == 0 ? sourceY + 1 : sourceY;
+		}
+
+	}
+
+	// I can fit 25 on the top row, then 24 on the vertical down
+	// then another 24 going right to left along the bottom
+	// then 23 going up the left for a total of 96 10x10 so I skip 1 pixel on the
+	// source
+	// every 7 images - enh. maybe I won't bother skipping.
+	private static Point getXYCoords(int iteration) {
+		int topRowIterations = 256 / 10;
+		int rightVerticalIterations = 246 / 10;
+		int bottomRowIterations = 246 / 10;
+		int leftVerticalIterations = 236 / 10;
+
+		if (iteration < topRowIterations) {
+			System.out.println("Iteration "+iteration+" in first");
+			return new Point(10 * iteration, 0);
+		}
+		if (iteration < topRowIterations + rightVerticalIterations) {
+			System.out.println("Iteration "+iteration+" in second");
+			return new Point(245, (iteration - topRowIterations) * 10);
+		}
+
+		if (iteration < topRowIterations + rightVerticalIterations + bottomRowIterations) {
+			int numInto = iteration-topRowIterations-rightVerticalIterations;
+			System.out.println("Iteration "+iteration+" in third "+numInto);
+			return new Point(245-(10*numInto), 245);
+		}
+		System.out.println("Iteration "+iteration+" in fourth");
+		int numInto = iteration-topRowIterations-rightVerticalIterations-bottomRowIterations;
+		return new Point(0, 245-(numInto*10));
+
+	}
+
+	/**
+	 * 
+	 * @param baseColors
+	 * @param inputFile
+	 * @param family
+	 * @param outDir
+	 */
+
 	public static void paintFamilyTrainings(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) {
 		for (Set<Color> groupColors : family.getColorGroups()) {
 			if (!groupColors.isEmpty()) {
@@ -292,16 +428,89 @@ public class ImageUtil {
 		}
 	}
 
-	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir)
-			throws IOException {
-		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
-		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator + inputFile.getName()));
+	/**
+	 * Does the same thing as paint to family but does every combination of the
+	 * first 3 groups, and then all the combinations of any remaining groups
+	 * 
+	 * @param baseColors
+	 * @param inputFile
+	 * @param family
+	 * @param outDir
+	 * @throws IOException
+	 */
+//	public static void paintToFamilyColorIteration(List<Color> baseColors, File inputFile, ColorFamily family, File outDir, String outputSuffux)
+//			throws IOException {
+//
+//		for(List<Color> colorCombo :  generateColorCombos(baseColors, family)) {
+//			BufferedImage painted = paintToFamily(colorCombo, ImageIO.read(inputFile), family);
+//			ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator + inputFile.getName().replace(".png", ".png")));
+//		}
+//		
+//	}
+
+	public static List<List<Color>> generateColorCombos(List<Color> baseColors, ColorFamily family) {
+		int mainMaxIdx = 1;
+		for (int i = 0; i < family.getColorGroups().size(); i++) {
+			if (family.get(i).size() == 0 || i > 3) {
+				mainMaxIdx = i;
+				break;
+			}
+		}
+		int secondaryMaxIdx = -1;
+		for (int i = mainMaxIdx; i < family.getColorGroups().size(); i++) {
+			if (family.get(i).size() == 0) {
+				secondaryMaxIdx = -1;
+				break;
+			}
+			if (i > mainMaxIdx + 2) {
+				secondaryMaxIdx = i;
+				break;
+			}
+		}
+		List<List<Color>> colorCombos = new ArrayList<>();
+
+		for (int i = 0; i < mainMaxIdx; i++) {
+			List<Color> colorDest = new ArrayList<>();
+			getColorWrapping(baseColors, 0, i, mainMaxIdx, mainMaxIdx, colorDest);
+			for (int z = mainMaxIdx; z < secondaryMaxIdx; z++) {
+				getColorWrapping(baseColors, mainMaxIdx, z, secondaryMaxIdx, secondaryMaxIdx, colorDest);
+			}
+			int continueFrom = secondaryMaxIdx < 0 ? mainMaxIdx : secondaryMaxIdx;
+			for (int r = continueFrom + 1; r < baseColors.size(); r++) {
+				colorDest.add(baseColors.get(r));
+			}
+			colorCombos.add(colorDest);
+		}
+
+		return colorCombos;
+
 	}
 
-	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir)
-			throws IOException {
+	private static void getColorWrapping(List<Color> colors, int returnTo, int start, int max, int goalSize,
+			List<Color> destination) {
+		int idx = start;
+		while (destination.size() < goalSize) {
+			if (idx >= max) {
+				idx = returnTo;
+			}
+			destination.add(colors.get(idx));
+			idx++;
+		}
+
+	}
+
+	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
+			String outputSuffix) throws IOException {
+		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator
+				+ inputFile.getName().replace(".png", outputSuffix + ".png")));
+	}
+
+	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
+			String outputSuffix) throws IOException {
 		BufferedImage painted = paintInput(baseColors, ImageIO.read(inputFile), family);
-		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator + inputFile.getName()));
+		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator
+				+ inputFile.getName().replace(".png", outputSuffix + ".png")));
 	}
 
 	// Not using analyze colors right now because LAB still ends up grouping some
@@ -375,11 +584,11 @@ public class ImageUtil {
 
 		for (Color c : colorsFound) {
 
-			SimilarColors sc = findMostSimilar(c, colorsFound, similars);
-			if (sc == null) {
+			Optional<SimilarColors> sc = findMostSimilar(c, colorsFound, similars);
+			if (sc.isEmpty()) {
 				lonelies.add(c);
 			} else {
-				similars.add(sc);
+				similars.add(sc.get());
 			}
 		}
 		ColorFamily family = new ColorFamily();
@@ -403,14 +612,51 @@ public class ImageUtil {
 		return output;
 	}
 
-	public static Set<Color> makeColorGroup(Color c, Set<SimilarColors> similars) {
+	public static ColorFamily analyzeColors(Set<Color> colorsFound) {
+		List<SimilarColors> similars = new ArrayList<>();
+		Set<Color> lonelies = new HashSet<>();
+		// Set<Color> workingSet = new HashSet<Color>(colorsFound);
+		List<Color> colorList = new LinkedList<Color>(colorsFound);
+
+		for (int i = 0; i < colorList.size(); i++) {
+			Color c = colorList.get(0);
+			List<SimilarColors> sc = findMostSimilars(c, colorList, 25, 10);
+			if (sc.isEmpty()) {
+				lonelies.add(c);
+			} else {
+				similars.addAll(sc);
+			}
+			colorList.remove(c);
+			System.out.println("Did a similars of size " + sc.size() + " with " + colorList.size() + " left");
+		}
+		ColorFamily family = new ColorFamily();
+		for (SimilarColors sc : similars) {
+			if (!family.isInFamily(sc.getC1())) {
+				Set<Color> group = makeColorGroup(sc.getC1(), similars);
+				group.addAll(makeColorGroup(sc.getC2(), similars));
+				family.addGroup(group);
+			}
+
+		}
+
+		for (Set<Color> group : family.getColorGroups()) {
+			System.out.println("FAMILY");
+			for (Color c : group) {
+				System.out.println(c.getRed() + " " + c.getGreen() + " " + c.getBlue());
+			}
+		}
+
+		return family;
+	}
+
+	public static Set<Color> makeColorGroup(Color c, Collection<SimilarColors> similars) {
 		Set<Color> family = new HashSet<>();
 		family.add(c);
 		addFamilyMembers(family, similars);
 		return family;
 	}
 
-	public static void addFamilyMembers(Set<Color> group, Set<SimilarColors> similars) {
+	public static void addFamilyMembers(Set<Color> group, Collection<SimilarColors> similars) {
 
 		boolean added = false;
 		List<Color> concurrency = new ArrayList<Color>(group);
@@ -429,7 +675,8 @@ public class ImageUtil {
 		}
 	}
 
-	public static SimilarColors findMostSimilar(Color lonelyColor, Set<Color> colors, Set<SimilarColors> foundMatches) {
+	public static Optional<SimilarColors> findMostSimilar(Color lonelyColor, Set<Color> colors,
+			Set<SimilarColors> foundMatches) {
 		SimilarColors bestMatch = null;
 		for (Color c : colors) {
 			if (!c.equals(lonelyColor)) {
@@ -441,9 +688,32 @@ public class ImageUtil {
 			}
 		}
 		if (bestMatch.getDiff() < 25) {
-			return bestMatch;
+			return Optional.of(bestMatch);
 		}
-		return null;
+		return Optional.empty();
+	}
+
+	public static List<SimilarColors> findMostSimilars(Color lonelyColor, List<Color> colors, int threshold,
+			int removeThreshold) {
+		List<SimilarColors> bestMatches = new ArrayList<>();
+		for (int i = 0; i < colors.size(); i++) {
+			Color c = colors.get(i);
+			if (!c.equals(lonelyColor)) {
+				SimilarColors sc = new SimilarColors(lonelyColor, c);
+				if (sc.getDiff() < threshold) {
+					bestMatches.add(sc);
+				}
+				if (sc.getDiff() < removeThreshold) {
+					colors.remove(sc.getC1());
+					colors.remove(sc.getC2());
+					i -= 2;
+					i = i < 0 ? 0 : i;
+				}
+			}
+
+		}
+
+		return bestMatches;
 	}
 
 	public static BufferedImage centerImageOnGreen(BufferedImage in, int size) {
@@ -546,23 +816,26 @@ public class ImageUtil {
 		return colorGroupColors;
 	}
 
-	// Uses the input image's size to base 
+	// Uses the input image's size to base
 	public static void paintSingeGroup(int familyColorGroupIdx, BufferedImage input, String inputName, File outputDir,
 			ColorFamily family) throws IOException {
 		BufferedImage out = new BufferedImage(input.getWidth() * 2, input.getHeight(), input.getType());
-		//copyImage(paintInput(initColorGroupColors(), input, family), out, input.getWidth(), 0);
+		// copyImage(paintInput(initColorGroupColors(), input, family), out,
+		// input.getWidth(), 0);
 		List<Color> baseColors = initColorGroupColors();
-		
-		Optional<BufferedImage> groupColorPainted = paintSingleGroupInput(baseColors.get(0), paintInput(initColorGroupColors(), input, family), baseColors.get(familyColorGroupIdx));
-		
-		if(groupColorPainted.isEmpty()) {
+
+		Optional<BufferedImage> groupColorPainted = paintSingleGroupInput(baseColors.get(0),
+				paintInput(initColorGroupColors(), input, family), baseColors.get(familyColorGroupIdx));
+
+		if (groupColorPainted.isEmpty()) {
 			return; // don't output an empty training image
 		}
-		
+
 		copyImage(groupColorPainted.get(), out, input.getWidth(), 0);
 		copyImage(paintSingeGroup(family.get(familyColorGroupIdx), input, family), out, 0, 0);
-		
-		ImageIO.write(out, "png", new File(outputDir + File.separator + inputName.replace(".png", "_cg"+familyColorGroupIdx+".png")));
+
+		ImageIO.write(out, "png",
+				new File(outputDir + File.separator + inputName.replace(".png", "_cg" + familyColorGroupIdx + ".png")));
 	}
 
 	public static BufferedImage paintSingeGroup(Set<Color> groupColors, BufferedImage input, ColorFamily family) {
@@ -595,22 +868,24 @@ public class ImageUtil {
 		return out;
 	}
 
-	// Returns Optional.empty if the input image didn't contain the family group specified by groupColor
-	public static Optional<BufferedImage> paintSingleGroupInput(Color outputColor, BufferedImage input, Color groupColor) {
-		BufferedImage out = blankImage(input.getWidth(), input.getHeight(),GREEN_BG);
+	// Returns Optional.empty if the input image didn't contain the family group
+	// specified by groupColor
+	public static Optional<BufferedImage> paintSingleGroupInput(Color outputColor, BufferedImage input,
+			Color groupColor) {
+		BufferedImage out = blankImage(input.getWidth(), input.getHeight(), GREEN_BG);
 		boolean containsColor = false;
 		for (int y = 0; y < out.getHeight(); y++) {
 			for (int x = 0; x < out.getWidth(); x++) {
 				Color inputC = new Color(input.getRGB(x, y));
 				if (groupColor.equals(inputC)) {
 					containsColor = true;
-					out.setRGB(x, y, outputColor.getRGB());//baseColors.get(family.getColorGroup(inputC)).getRGB());
+					out.setRGB(x, y, outputColor.getRGB());// baseColors.get(family.getColorGroup(inputC)).getRGB());
 				}
 			}
 		}
 		return containsColor ? Optional.ofNullable(out) : Optional.empty();
 	}
-	
+
 	public static BufferedImage paintInput(List<Color> baseColors, BufferedImage input, ColorFamily family) {
 		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
 		for (int y = 0; y < out.getHeight(); y++) {
@@ -800,4 +1075,5 @@ public class ImageUtil {
 		bd = bd * bd;
 		return Math.sqrt(rd + gd + bd);
 	}
+
 }
