@@ -57,6 +57,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(paintToFamilyIterationButton());
 		getPanel().add(reduceColorButton());
 		getPanel().add(sliceImageButton());
+		getPanel().add(combineImagesButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -452,7 +453,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton sliceImageButton() {
-		JButton generateButton = new JButton("Slice File");
+		JButton generateButton = new JButton("Slice Files");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -480,6 +481,38 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
+	
+
+	private JButton combineImagesButton() {
+		JButton generateButton = new JButton("Recombine Files");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File inputDir = fc.getSelectedFile();
+					 fc = new JFileChooser();
+						fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+						returnVal = fc.showOpenDialog(StartupScreen.this);
+						File outputDir = fc.getSelectedFile();
+					try {
+						generateButton.setText("Combining....");
+						ImageUtil.combineImages(inputDir, outputDir);
+						generateButton.setText("Recombine Files");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return generateButton;
+	}
+	
 	
 	private void handleError(Exception e) {
 		e.printStackTrace();

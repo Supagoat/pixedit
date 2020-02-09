@@ -30,8 +30,8 @@ public class ImageUtil {
 	public static final int CROPPABLE_IMAGE_WIDTH = 256;
 	public static final int CROPPABLE_IMAGE_HEIGHT = 256;
 	public static final Color GREEN_BG = new Color(0, 255, 0);
-	public static final String FILENAME_COORDS_SPLIT = "oOoOoOo";
-	public static final String FILENAME_SIZE_SPLIT = "sSsSsSs";
+	public static final String FILENAME_COORDS_SPLIT = "oOo";
+	public static final String FILENAME_SIZE_SPLIT = "sSs";
 	
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
@@ -347,7 +347,7 @@ public class ImageUtil {
 	 */
 	public static void sliceImage(BufferedImage input, String inputName, File outputDir) throws IOException {
 
-		int y=0;
+		int y = 0;
 		while (y < input.getHeight()) {
 			int x = 0;
 			int yOffset = y < 0 ? -y : 0;
@@ -361,17 +361,12 @@ public class ImageUtil {
 				w = x < 0 ? w+x : w;
 				h = y < 0 ? h+y : h;
 				
-				System.out.println("workingxy: "+workingX+","+workingY+" offsets "+xOffset+", "+yOffset);
-				System.out.println("xywh: "+x+","+y+","+w+","+h+" ");
 				copyImage(input.getSubimage(workingX, workingY, w, h), slice, xOffset, yOffset);
 				//addBorder(input, slice, x, y, w, h);
 				ImageIO.write(slice, "png",
-						new File(outputDir + File.separator + inputName.replace(".png", FILENAME_COORDS_SPLIT+"_"+x+"_"+y + "_"+FILENAME_SIZE_SPLIT+"_"+input.getWidth()+"_"+input.getHeight()+".png")));
-
+						new File(outputDir + File.separator + inputName.replace(".png", FILENAME_COORDS_SPLIT+x+"_"+y + "_"+FILENAME_SIZE_SPLIT+input.getWidth()+"_"+input.getHeight()+".png")));
 				x += 256;
-
 			}
-			
 			y += 256;
 		}
 	}
@@ -382,6 +377,32 @@ public class ImageUtil {
 		doBorder(downscaled, target);
 	}
 	
+	
+	public static void combineImages(File inputDir, File outputDir) throws IOException {
+		File[] inputs = inputDir.listFiles();
+		Arrays.sort(inputs);
+		String baseName = inputs[0].getName().substring(0, inputs[0].getName().indexOf(FILENAME_COORDS_SPLIT));
+		List<File> imgParts = new ArrayList<>();
+		for(int i=0;i<inputs.length;i++) {
+			if(inputs[i].getName().startsWith(baseName)) {
+				imgParts.add(inputs[i]);
+			} else {
+				Point size = parseSize(imgParts.get(0).getName());
+				BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
+				ImageIO.write(combined, "png",
+						new File(outputDir + File.separator +baseName+"_combined.png"));
+
+				baseName = inputs[i].getName().substring(0, inputs[i].getName().indexOf(FILENAME_SIZE_SPLIT));
+				imgParts = new ArrayList<>();
+				imgParts.add(inputs[i]);
+			}
+		}
+		Point size = parseSize(imgParts.get(0).getName());
+		BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
+		ImageIO.write(combined, "png",
+				new File(outputDir + File.separator +baseName+"_combined.png"));
+	}
+	
 	public static BufferedImage reconstructSlicedImage(List<File> inputFiles, int origWidth, int origHeight) throws IOException {
 		List<Point> coords = inputFiles.stream().map(f -> parseCoords(f.getName())).collect(Collectors.toList());
 		int minX = min(coords, ImageUtil::getX);
@@ -389,8 +410,8 @@ public class ImageUtil {
 		int maxX = max(coords, ImageUtil::getX);
 		int maxY = max(coords, ImageUtil::getY);
 		
-		int width = maxX-minX;
-		int height = maxY-minY;
+		int width = maxX-minX+256;
+		int height = maxY-minY+256;
 		
 		BufferedImage combined = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		for(int i=0;i<inputFiles.size();i++) {
@@ -436,6 +457,7 @@ public class ImageUtil {
 	}
 	
 	public static Point parseIntsFromFilename(String part) {
+		System.out.println(part);
 		return new Point(Integer.parseInt(part.split("_")[0]), Integer.parseInt(part.split("_")[1]));
 	}
 
