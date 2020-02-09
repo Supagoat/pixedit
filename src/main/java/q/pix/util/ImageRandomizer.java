@@ -38,8 +38,8 @@ public class ImageRandomizer {
 		BufferedImage in_out = ImageUtil.blankImage();
 		BufferedImage target_out = ImageUtil.blankImage();
 		for(int i=0;i<outputImageCount;i++) {
-			for(int x=0;x<in_out.getWidth()/BLOCK_SIZE;x+=BLOCK_SIZE) {
-				for(int y=0;y<in_out.getHeight()/BLOCK_SIZE;y+=BLOCK_SIZE) {
+			for(int x=0;x<in_out.getWidth()-BLOCK_SIZE;x+=BLOCK_SIZE) {
+				for(int y=0;y<in_out.getHeight()-BLOCK_SIZE;y+=BLOCK_SIZE) {
 					int imgIdx = (int)(Math.random()*inFiles.size());
 					BufferedImage in_in = ImageIO.read(inFiles.get(imgIdx));
 					BufferedImage in_target = ImageIO.read(new File(inToTarget(inFiles.get(imgIdx))));
@@ -52,7 +52,7 @@ public class ImageRandomizer {
 					//target_out.getGraphics().drawImage(in_target, x, y, BLOCK_SIZE, BLOCK_SIZE, null);
 				}
 			}
-			ImageUtil.combineImage(target_out, in_out, outputDir, "gt_"+i+".png");
+			ImageUtil.combineImage(target_out, in_out, outputDir, "gt_"+i+".png", ImageUtil.IMAGE_WIDTH, ImageUtil.IMAGE_HEIGHT);
 		}
 	}
 	

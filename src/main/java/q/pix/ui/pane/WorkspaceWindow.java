@@ -20,7 +20,7 @@ import javax.swing.JPanel;
 
 import q.pix.ui.button.DisplayModeButton;
 
-public class WorkspaceWindow extends JFrame {
+public class WorkspaceWindow extends JFrame implements WorkspacePaintWindow {
 
 	private static final long serialVersionUID = 1L;
 	private GraphicsPanel graphicsPanel;
@@ -291,10 +291,9 @@ public class WorkspaceWindow extends JFrame {
 		return backgroundColor;
 	}
 
-	public WorkspaceWindow setBackgroundColor(int backgroundColor) {
+	public void setBackgroundColor(int backgroundColor) {
 		this.backgroundColor = Optional.of(backgroundColor);
 		getColorPanel().add(makeColorButton("Erase", new Color(getBackgroundColor().get())));
-		return this;
 	}
 
 	public JButton getActiveColor() {

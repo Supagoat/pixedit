@@ -19,7 +19,7 @@ import q.pix.util.ImageUtil;
 
 public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionListener {
 	private static final long serialVersionUID = 1L;
-	private WorkspaceWindow workspaceWindow;
+	private WorkspacePaintWindow workspaceWindow;
 	private int zoomLevel = 1;
 	private BufferedImage inputImage;
 	private BufferedImage targetImage;
@@ -33,17 +33,21 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private int xView, yView;
 	private boolean[] pressedButtons;
 	private ThreadPoolExecutor threadEx;
-	
+
 	private boolean inBackgroundSelectionMode = false;
 
-	public GraphicsPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+	public GraphicsPanel(WorkspacePaintWindow workspaceWindow) {
 		setWorkspaceWindow(workspaceWindow);
-		setInputImage(inputImage);
-		setTargetImage(targetImage);
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		pressedButtons = new boolean[3];
 		setThreadEx(new ThreadPoolExecutor(8, 8, 10l, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>()));
+	}
+	public GraphicsPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+		this(workspaceWindow);
+		setInputImage(inputImage);
+		setTargetImage(targetImage);
+
 	}
 
 	@Override
@@ -74,20 +78,15 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 			g2.drawImage(scaleInput(), ImageUtil.IMAGE_WIDTH * getZoomLevel(), 0, null);
 		}
 	}
-	
+
 	/**
 	 * Creates an image out of a sub-section of another image
 	 * 
-	 * @param source
-	 *            source image
-	 * @param x
-	 *            left of source to copy from
-	 * @param y
-	 *            top of source to copy from
-	 * @param width
-	 *            width to copy
-	 * @param height
-	 *            height to copy
+	 * @param source source image
+	 * @param x      left of source to copy from
+	 * @param y      top of source to copy from
+	 * @param width  width to copy
+	 * @param height height to copy
 	 * @return
 	 */
 	protected BufferedImage subImg(BufferedImage source, int x, int y, int width, int height) {
@@ -115,19 +114,32 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 
 	protected BufferedImage scaleInput() {
 		BufferedImage img = scaleImage(getInputImage(), getZoomLevel());
+		deGreen(img);
 		setScaledInput(img);
 		return img;
 	}
 
 	protected BufferedImage scaleTarget() {
 		BufferedImage img = scaleImage(getTargetImage(), getZoomLevel());
+		deGreen(img);
 		setScaledTarget(img);
 		return img;
 	}
+	
+	// The all green background was hurnting my eyes, so replace those colors on display
+	private void deGreen(BufferedImage img) {
+		Color pureGreen = new Color(0,255,0);
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getHeight(); y++) {
+				if(img.getRGB(x,y) == pureGreen.getRGB()) {
+					img.setRGB(x, y, 0);
+				}
+			}
+		}
+	}
 
 	public BufferedImage scaleImage(BufferedImage img, int scale) {
-		BufferedImage scaled = new BufferedImage(img.getWidth() * scale, img.getHeight() * scale, img.getType());		
-		
+		BufferedImage scaled = new BufferedImage(img.getWidth() * scale, img.getHeight() * scale, img.getType());
 
 //		RenderMaster renderMaster = new RenderMaster(getThreadEx(), 4);
 //		for (int xSplit = 0; xSplit < 2; xSplit++) {
@@ -163,11 +175,11 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		return scaled;
 	}
 
-	public WorkspaceWindow getWorkspaceWindow() {
+	public WorkspacePaintWindow getWorkspaceWindow() {
 		return workspaceWindow;
 	}
 
-	public GraphicsPanel setWorkspaceWindow(WorkspaceWindow workspaceWindow) {
+	public GraphicsPanel setWorkspaceWindow(WorkspacePaintWindow workspaceWindow) {
 		this.workspaceWindow = workspaceWindow;
 		return this;
 	}
@@ -238,12 +250,10 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		mouseEvent(e);
 	}
 
-
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		mouseEvent(e);
 	}
-
 
 	protected void drawImgAt(BufferedImage img, int x, int y) {
 		if (img != null) {

@@ -7,13 +7,14 @@ import java.awt.image.BufferedImage;
 import java.time.Duration;
 
 import q.pix.ui.pane.GraphicsPanel;
+import q.pix.ui.pane.WorkspacePaintWindow;
 import q.pix.ui.pane.WorkspaceWindow;
 
 public class PaintingPanel extends GraphicsPanel {
 	private static final long serialVersionUID = 1L;
 	private long bgSelectTime = Long.MAX_VALUE;
 	
-	public PaintingPanel(WorkspaceWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
+	public PaintingPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		super(workspaceWindow, inputImage, targetImage);
 		addMouseListener(this);
 		addMouseMotionListener(this);
