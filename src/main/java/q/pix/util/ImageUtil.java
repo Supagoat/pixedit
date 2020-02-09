@@ -13,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -28,13 +30,31 @@ public class ImageUtil {
 	public static final int CROPPABLE_IMAGE_WIDTH = 256;
 	public static final int CROPPABLE_IMAGE_HEIGHT = 256;
 	public static final Color GREEN_BG = new Color(0, 255, 0);
-
+	public static final String FILENAME_COORDS_SPLIT = "oOoOoOo";
+	public static final String FILENAME_SIZE_SPLIT = "sSsSsSs";
+	
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
 			return downscale(ImageIO.read(imageFile));
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	public static BufferedImage crop1To1(BufferedImage input, Point preferredCenter) {
+		int size = input.getWidth() < input.getHeight() ? input.getWidth() : input.getHeight();
+		int x = preferredCenter.x-(size/2);
+		int y = preferredCenter.y-(size/2);
+		x = x < 0 ? 0 : x;
+		y = y < 0 ? 0 : y;
+		return copyImage(input, blankImage(size, size, GREEN_BG), x, y, size);
+	}
+	
+	public static BufferedImage downscaleTo(BufferedImage input, int width, int height, Point center) {
+		if (input.getWidth() > width || input.getHeight() > height) {
+			return Scalr.resize(input, Scalr.Method.ULTRA_QUALITY, Scalr.Mode.AUTOMATIC, width, height);
+		}
+		return input;
 	}
 
 	public static BufferedImage downscaleTo(BufferedImage input, int width, int height) {
@@ -202,6 +222,16 @@ public class ImageUtil {
 		return output;
 
 	}
+	
+	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int fromX, int fromY, int size) {
+		for (int x = fromX; x < size; x++) {
+			for (int y = fromY; y < size; y++) {
+					output.setRGB(x, y, input.getRGB(x, y));
+				} 
+		}
+		return output;
+
+	}
 
 	public static void makeTrainSet(String dir) throws IOException {
 		List<String> contents = Arrays.asList(new File(dir).list());
@@ -316,23 +346,97 @@ public class ImageUtil {
 	 * @param doBorder
 	 */
 	public static void sliceImage(BufferedImage input, String inputName, File outputDir) throws IOException {
-		BufferedImage downscaled = downscaleTo(input, 100, 100); // need to go do the math but this is for 256x256
-		
+
 		int y=0;
 		while (y < input.getHeight()) {
 			int x = 0;
+			int yOffset = y < 0 ? -y : 0;
+			int workingY = y < 0 ? 0 : y;
 			while (x < input.getWidth()) {
-				int w = (x+256) < input.getWidth() ? 256 : (x+256)-input.getWidth();
-				int h = (y+256) < input.getHeight() ? 256 : (y+256)-input.getHeight();
-				BufferedImage slice = blankImage();
-				copyImage(input.getSubimage(x, y, w, h), slice, 0, 0);
-				doBorder(downscaled, slice);
+				int workingX = x < 0 ? 0 : x;
+				int xOffset = x < 0 ? -x : 0;
+				BufferedImage slice = blankImage(GREEN_BG);
+				int w = (workingX+256) < input.getWidth() ? 256  : 256-((workingX+256)-input.getWidth());
+				int h = (workingY+256) < input.getHeight() ? 256 : 256-((workingY+256)-input.getHeight());
+				w = x < 0 ? w+x : w;
+				h = y < 0 ? h+y : h;
+				
+				System.out.println("workingxy: "+workingX+","+workingY+" offsets "+xOffset+", "+yOffset);
+				System.out.println("xywh: "+x+","+y+","+w+","+h+" ");
+				copyImage(input.getSubimage(workingX, workingY, w, h), slice, xOffset, yOffset);
+				//addBorder(input, slice, x, y, w, h);
 				ImageIO.write(slice, "png",
-						new File(outputDir + File.separator + inputName.replace(".png", "_"+x+"_"+y + ".png")));
+						new File(outputDir + File.separator + inputName.replace(".png", FILENAME_COORDS_SPLIT+"_"+x+"_"+y + "_"+FILENAME_SIZE_SPLIT+"_"+input.getWidth()+"_"+input.getHeight()+".png")));
+
 				x += 256;
+
 			}
+			
 			y += 256;
 		}
+	}
+	
+	public static void addBorder(BufferedImage bigImage, BufferedImage target, int x, int y, int w, int h) {
+		BufferedImage downscaled = downscaleTo(crop1To1(bigImage, new Point(w, h)), 100, 100); // need to go do the math but this is for 256x256
+
+		doBorder(downscaled, target);
+	}
+	
+	public static BufferedImage reconstructSlicedImage(List<File> inputFiles, int origWidth, int origHeight) throws IOException {
+		List<Point> coords = inputFiles.stream().map(f -> parseCoords(f.getName())).collect(Collectors.toList());
+		int minX = min(coords, ImageUtil::getX);
+		int minY = min(coords, ImageUtil::getY);
+		int maxX = max(coords, ImageUtil::getX);
+		int maxY = max(coords, ImageUtil::getY);
+		
+		int width = maxX-minX;
+		int height = maxY-minY;
+		
+		BufferedImage combined = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		for(int i=0;i<inputFiles.size();i++) {
+			copyImage(ImageIO.read(inputFiles.get(i)), combined, coords.get(i).x-minX, coords.get(i).y-minY);
+		}
+		
+		return combined.getSubimage(-minX, -minY, origWidth, origHeight);
+	}
+	
+	public static int min(List<Point> points, Function<Point, Integer> getter) {
+		int v = getter.apply(points.get(0));
+		for(Point p : points) {
+			v = getter.apply(p) < v ? getter.apply(p) : v;
+		}
+		return v;
+	}
+	
+	public static int max(List<Point> points, Function<Point, Integer> getter) {
+		int v = getter.apply(points.get(0));
+		for(Point p : points) {
+			v = getter.apply(p) > v ? getter.apply(p) : v;
+		}
+		return v;
+	}
+
+	
+	public static int getX(Point p) {
+		return p.x;
+	}
+	
+	public static int getY(Point p) {
+		return p.y;
+	}
+	
+	public static Point parseCoords(String name) {
+		String coordsPart = name.substring(name.indexOf(FILENAME_COORDS_SPLIT)+FILENAME_COORDS_SPLIT.length(), name.indexOf(FILENAME_SIZE_SPLIT));
+		return parseIntsFromFilename(coordsPart);
+	}
+	
+	public static Point parseSize(String name) {
+		String sizePart = name.substring(name.indexOf(FILENAME_SIZE_SPLIT)+FILENAME_SIZE_SPLIT.length(), name.indexOf(".png"));
+		return parseIntsFromFilename(sizePart);
+	}
+	
+	public static Point parseIntsFromFilename(String part) {
+		return new Point(Integer.parseInt(part.split("_")[0]), Integer.parseInt(part.split("_")[1]));
 	}
 
 //	public static void doBorder(BufferedImage source, BufferedImage destination) {
