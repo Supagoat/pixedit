@@ -335,20 +335,21 @@ public class ImageUtil {
 	public static void sliceImages(File inputDir, File outputDir) throws IOException {
 		for (File f : inputDir.listFiles()) {
 			BufferedImage input = ImageIO.read(f);
-			//sliceImage(input, f.getName(), outputDir);
+			// sliceImage(input, f.getName(), outputDir);
 			sliceImageRandomly(input, f.getName(), outputDir);
 		}
 	}
+
 	public static void sliceImagePairs(File parentDir) throws IOException {
-		for (File f : new File(parentDir.getAbsolutePath()+File.separator+"input_orig").listFiles()) {
+		for (File f : new File(parentDir.getAbsolutePath() + File.separator + "input_orig").listFiles()) {
 			BufferedImage input = ImageIO.read(f);
-			File targetF = new File(parentDir.getAbsoluteFile()+File.separator+"target_orig"+File.separator+f.getName());
+			File targetF = new File(
+					parentDir.getAbsoluteFile() + File.separator + "target_orig" + File.separator + f.getName());
 			BufferedImage target = ImageIO.read(targetF);
-			//sliceImage(input, f.getName(), outputDir);
+			// sliceImage(input, f.getName(), outputDir);
 			sliceImagePairRandomly(input, target, f.getName(), parentDir);
 		}
 	}
-	
 
 	/**
 	 * Splits an image into sub-images. If border is requested the full image will
@@ -369,7 +370,7 @@ public class ImageUtil {
 			while (x < input.getWidth()) {
 				int workingX = x < 0 ? 0 : x;
 				int xOffset = x < 0 ? -x : 0;
-				
+
 				int w = (workingX + 256) < input.getWidth() ? 256 : 256 - ((workingX + 256) - input.getWidth());
 				int h = (workingY + 256) < input.getHeight() ? 256 : 256 - ((workingY + 256) - input.getHeight());
 				w = x < 0 ? w + x : w;
@@ -381,17 +382,16 @@ public class ImageUtil {
 			y += 256;
 		}
 	}
-	
-	public static void copySubImage(BufferedImage input, String inputName, File outputDir, int workingX, int workingY, 
+
+	public static void copySubImage(BufferedImage input, String inputName, File outputDir, int workingX, int workingY,
 			int w, int h, int xOffset, int yOffset, int x, int y) throws IOException {
 		BufferedImage slice = blankImage(GREEN_BG);
-		
+
 		copyImage(input.getSubimage(workingX, workingY, w, h), slice, xOffset, yOffset);
 		// addBorder(input, slice, x, y, w, h);
 		ImageIO.write(slice, "png",
-				new File(outputDir + File.separator
-						+ inputName.replace(".png", FILENAME_COORDS_SPLIT + x + "_" + y + "_"
-								+ FILENAME_SIZE_SPLIT + input.getWidth() + "_" + input.getHeight() + ".png")));
+				new File(outputDir + File.separator + inputName.replace(".png", FILENAME_COORDS_SPLIT + x + "_" + y
+						+ "_" + FILENAME_SIZE_SPLIT + input.getWidth() + "_" + input.getHeight() + ".png")));
 	}
 
 	public static void sliceImageRandomly(BufferedImage input, String inputName, File outputDir) throws IOException {
@@ -426,23 +426,25 @@ public class ImageUtil {
 
 		}
 	}
-	
-	public static void sliceImagePairRandomly(BufferedImage input, BufferedImage target, String inputName, File outputDirParent) throws IOException {
 
-		File inputSliceOutputDir = new File(outputDirParent.getAbsolutePath()+File.separator+"input");
-		File targetSliceOutputDir = new File(outputDirParent.getAbsolutePath()+File.separator+"target");
-		if(!inputSliceOutputDir.exists()) {
+	public static void sliceImagePairRandomly(BufferedImage input, BufferedImage target, String inputName,
+			File outputDirParent) throws IOException {
+		long t = System.currentTimeMillis();
+		File inputSliceOutputDir = new File(outputDirParent.getAbsolutePath() + File.separator + "input");
+		File targetSliceOutputDir = new File(outputDirParent.getAbsolutePath() + File.separator + "target");
+		if (!inputSliceOutputDir.exists()) {
 			inputSliceOutputDir.mkdir();
 		}
-		if(!targetSliceOutputDir.exists()) {
+		if (!targetSliceOutputDir.exists()) {
 			targetSliceOutputDir.mkdir();
 		}
-		
-		if(input.getWidth() != target.getWidth() || input.getHeight() != target.getHeight()) {
-			throw new IllegalArgumentException("Input 1 and input 2 of input name "+inputName+" must be the same dimension");
+
+		if (input.getWidth() != target.getWidth() || input.getHeight() != target.getHeight()) {
+			throw new IllegalArgumentException(
+					"Input 1 and input 2 of input name " + inputName + " must be the same dimension");
 		}
-		
-		Set<String> coordsUnpainted = new HashSet<>();
+
+		Set<String> coordsUnpainted = new HashSet<>(input.getWidth() * input.getHeight());
 		for (int y = 0; y < input.getHeight(); y++) {
 			for (int x = 0; x < input.getHeight(); x++) {
 				coordsUnpainted.add(x + "," + y);
@@ -450,7 +452,7 @@ public class ImageUtil {
 		}
 
 		Random r = new Random();
-
+		int ct = 0;
 		while (!coordsUnpainted.isEmpty()) {
 			int x = r.nextInt(input.getWidth() + 200) - 200;
 			int y = r.nextInt(input.getHeight() + 200) - 200;
@@ -463,14 +465,36 @@ public class ImageUtil {
 			w = x < 0 ? w + x : w;
 			h = y < 0 ? h + y : h;
 
+			boolean nonBackgroundFound = false;
 			for (int sx = 0; sx < w; sx++) {
 				for (int sy = 0; sy < h; sy++) {
-					coordsUnpainted.remove((sx + workingX) + "," + (sy + workingY));
+					int coordX = (sx + workingX);
+					int coordY = (sy + workingY);
+					if (coordX >= 0 && coordX < input.getWidth() && coordY >= 0 && coordY < input.getHeight()) {
+						if (input.getRGB(coordX, coordY) != GREEN_BG.getRGB()) {
+							nonBackgroundFound = true;
+						}
+					}
+					coordsUnpainted.remove(coordX + "," + coordY);
 				}
 			}
-			copySubImage(input, inputName, inputSliceOutputDir, workingX, workingY, w, h, xOffset, yOffset, x, y);
-			copySubImage(target, inputName, targetSliceOutputDir, workingX, workingY, w, h, xOffset, yOffset, x, y);
+
+			// Include a percentage of the all-green inputs so there are some examples of
+			// them
+			if (nonBackgroundFound == false) {
+				if (r.nextInt(100) < 10) {
+					nonBackgroundFound = true;
+				}
+			}
+
+			if (nonBackgroundFound) {
+				copySubImage(input, inputName, inputSliceOutputDir, workingX, workingY, w, h, xOffset, yOffset, x, y);
+				copySubImage(target, inputName, targetSliceOutputDir, workingX, workingY, w, h, xOffset, yOffset, x, y);
+			}
+			ct++;
 		}
+		long timeTaken = System.currentTimeMillis() - t;
+		System.out.println("Per image: " + (timeTaken / ct));
 	}
 
 	public static void addBorder(BufferedImage bigImage, BufferedImage target, int x, int y, int w, int h) {
@@ -485,8 +509,12 @@ public class ImageUtil {
 		File[] inputs = inputDir.listFiles();
 		Arrays.sort(inputs);
 		String baseName = inputs[0].getName().substring(0, inputs[0].getName().indexOf(FILENAME_COORDS_SPLIT));
+
 		List<File> imgParts = new ArrayList<>();
 		for (int i = 0; i < inputs.length; i++) {
+			if (inputs[i].getName().endsWith("-inputs.png") ||inputs[i].getName().endsWith("-targets.png")  ) {
+				continue;
+			}
 			if (inputs[i].getName().startsWith(baseName)) {
 				imgParts.add(inputs[i]);
 			} else {
@@ -494,11 +522,12 @@ public class ImageUtil {
 				BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
 				ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
 
-				baseName = inputs[i].getName().substring(0, inputs[i].getName().indexOf(FILENAME_SIZE_SPLIT));
+				baseName = inputs[i].getName().substring(0, inputs[i].getName().indexOf(FILENAME_COORDS_SPLIT));
 				imgParts = new ArrayList<>();
 				imgParts.add(inputs[i]);
 			}
 		}
+
 		Point size = parseSize(imgParts.get(0).getName());
 		BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
 		ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
@@ -515,8 +544,10 @@ public class ImageUtil {
 		int width = maxX - minX + 256;
 		int height = maxY - minY + 256;
 
-		BufferedImage combined = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage combined = blankImage(width, height, GREEN_BG);// new BufferedImage(width, height,
+																		// BufferedImage.TYPE_INT_RGB);
 		for (int i = 0; i < inputFiles.size(); i++) {
+			
 			copyImage(ImageIO.read(inputFiles.get(i)), combined, coords.get(i).x - minX, coords.get(i).y - minY);
 		}
 
@@ -556,11 +587,14 @@ public class ImageUtil {
 	public static Point parseSize(String name) {
 		String sizePart = name.substring(name.indexOf(FILENAME_SIZE_SPLIT) + FILENAME_SIZE_SPLIT.length(),
 				name.indexOf(".png"));
+		
 		return parseIntsFromFilename(sizePart);
 	}
 
 	public static Point parseIntsFromFilename(String part) {
-		System.out.println(part);
+		if(part.endsWith("-outputs")) {
+			part = part.substring(0,part.indexOf("-outputs"));
+		}
 		return new Point(Integer.parseInt(part.split("_")[0]), Integer.parseInt(part.split("_")[1]));
 	}
 
