@@ -210,8 +210,9 @@ public class ImageUtil {
 	}
 
 	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset) {
-		for (int x = 0; x < input.getWidth(); x++) {
-			for (int y = 0; y < input.getHeight(); y++) {
+		// Skip a 4 pixel border because p2p has problems in certain cases because those pixels can't benefit from neighbors
+		for (int x = 3; x < input.getWidth()-3; x++) {
+			for (int y = 3; y < input.getHeight()-3; y++) {
 				// System.out.println("XY: "+x+","+y+" offset "+xOffset+","+yOffset+" WH:
 				// "+input.getWidth()+","+input.getHeight()+" op:
 				// "+output.getWidth()+","+output.getHeight());
@@ -446,7 +447,7 @@ public class ImageUtil {
 
 		Set<String> coordsUnpainted = new HashSet<>(input.getWidth() * input.getHeight());
 		for (int y = 0; y < input.getHeight(); y++) {
-			for (int x = 0; x < input.getHeight(); x++) {
+			for (int x = 0; x < input.getWidth(); x++) {
 				coordsUnpainted.add(x + "," + y);
 			}
 		}
@@ -478,7 +479,6 @@ public class ImageUtil {
 					coordsUnpainted.remove(coordX + "," + coordY);
 				}
 			}
-
 			// Include a percentage of the all-green inputs so there are some examples of
 			// them
 			if (nonBackgroundFound == false) {
