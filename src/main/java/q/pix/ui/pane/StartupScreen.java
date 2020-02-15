@@ -58,6 +58,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(reduceColorButton());
 		getPanel().add(sliceImageButton());
 		getPanel().add(combineImagesButton());
+		getPanel().add(sliceImagePairsButton());
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -72,7 +73,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton toTrainSetButton() {
-		JButton makeSetButton = new JButton("Create Trainset");
+		JButton makeSetButton = new JButton("Create p2p Trainset");
 		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -84,7 +85,7 @@ public class StartupScreen extends JFrame {
 					try {
 						makeSetButton.setText("Generating....");
 						ImageUtil.makeTrainSet(fc.getSelectedFile().getAbsolutePath());
-						makeSetButton.setText("Trainset");
+						makeSetButton.setText("Create p2p Trainset");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
 						handleError(ex);
@@ -97,7 +98,7 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton generateButton() {
-		JButton generateButton = new JButton("Generate Inputs");
+		JButton generateButton = new JButton("Generate p2p Generation Inputs");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -109,7 +110,7 @@ public class StartupScreen extends JFrame {
 					try {
 						generateButton.setText("Generating....");
 						ImageUtil.makeGenerationInputs(fc.getSelectedFile().getAbsolutePath());
-						generateButton.setText("Generate Inputs");
+						generateButton.setText("Generate p2p Generation Inputs");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
 						// generateButton.setText("ERROR: " + ex.toString());
@@ -471,6 +472,32 @@ public class StartupScreen extends JFrame {
 						generateButton.setText("Slicing....");
 						ImageUtil.sliceImages(inputDir, outputDir);
 						generateButton.setText("SliceImage");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return generateButton;
+	}
+	
+	private JButton sliceImagePairsButton() {
+		JButton generateButton = new JButton("Slice Image Pairs");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File parentDir = fc.getSelectedFile();
+					try {
+						generateButton.setText("Slicing....");
+						ImageUtil.sliceImagePairs(parentDir);
+						generateButton.setText("Slice Image Pairs");
 					} catch (Exception ex) {
 						// TODO: Get alert modals done
 						// generateButton.setText("ERROR: " + ex.toString());
