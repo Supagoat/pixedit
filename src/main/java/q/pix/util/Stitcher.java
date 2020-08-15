@@ -1,5 +1,6 @@
 package q.pix.util;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -39,9 +40,23 @@ public class Stitcher {
 			BufferedImage inputImage = ImageIO.read(f);
 			int xOff = Integer.parseInt(f.getName().split("_")[1]);
 			int yOff = Integer.parseInt(f.getName().split("_")[2]);
-			System.out.println(xOff+","+yOff+" gpomg to "+(inputImage.getWidth()+xOff)+","+(inputImage.getHeight()+yOff));
-			img.getGraphics().drawImage(inputImage, xOff, yOff, inputImage.getWidth()+xOff, inputImage.getHeight()+yOff, 
-					0,0, inputImage.getWidth(), inputImage.getHeight(), null);
+			//System.out.println(xOff+","+yOff+" gpomg to "+(inputImage.getWidth()+xOff)+","+(inputImage.getHeight()+yOff));
+			int heightSlice = inputImage.getHeight()/4;
+			int widthSlice = inputImage.getWidth()/4;
+			int left = xOff == 0 ? 0 : widthSlice;
+			int top =  yOff == 0 ? 0 : heightSlice;
+			System.out.println(xOff+" "+left);
+			int right = widthSlice*3;
+			int bot = heightSlice*3;
+//			for(int x=0;x<inputImage.getWidth();x++) {
+//				for(int y=0;y<inputImage.getWidth();y++) {
+//					if(x==y || inputImage.getWidth()-x == y || x == 0 || y == 0 || x == left || y == top || x == right || y == bot) {
+//						inputImage.setRGB(x, y, Color.RED.getRGB());
+//					}
+//				}
+//			}
+			img.getGraphics().drawImage(inputImage, xOff+left, yOff+top, xOff+widthSlice*3, yOff+heightSlice*3, 
+					left,top, right, bot, null);
 		}
 		if(!new File(outputDir+File.separator+outputName).exists()) {
 			ImageIO.write(img, "png", new File(outputDir+File.separator+outputName));
