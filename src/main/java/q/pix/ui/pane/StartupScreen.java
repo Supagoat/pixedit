@@ -1,6 +1,7 @@
 package q.pix.ui.pane;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.TextArea;
 import java.awt.event.ActionEvent;
@@ -11,7 +12,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
@@ -22,7 +22,6 @@ import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import q.pix.colorfamily.ColorFamily;
 import q.pix.colorfamily.FamilyAffinity;
 import q.pix.colorfamily.PaintingQueue;
 import q.pix.ui.event.ReturnToStartupListener;
@@ -96,6 +95,11 @@ public class StartupScreen extends JFrame {
 		});
 		return makeSetButton;
 	}
+	
+	/**
+	 * Creates the inputs to the generator given a directory of input files
+	 * @return The button
+	 */
 
 	private JButton generateButton() {
 		JButton generateButton = new JButton("Generate p2p Generation Inputs");
@@ -243,7 +247,7 @@ public class StartupScreen extends JFrame {
 					File inputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
 					File outputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_reduced");
 
-					//outputsDir.mkdir();
+					// outputsDir.mkdir();
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
 						Set<String> seenPrefixes = new HashSet<>();
 
@@ -256,13 +260,14 @@ public class StartupScreen extends JFrame {
 								File[] matching = inputChooser.getSelectedFile()
 										.listFiles((dirf, name) -> name.startsWith(prefix) && name.endsWith(".png"));
 								Set<Color> batchColors = new HashSet<>();
-								System.out.println("Working on set "+prefix);
+								System.out.println("Working on set " + prefix);
 								for (File imageFile : matching) {
 									BufferedImage image = ImageIO.read(imageFile);
 									batchColors.addAll(ImageUtil.getDistinctColors(image));
 								}
-								System.out.println("Found "+batchColors.size()+" colors");
-								// Divide them up into families automatically then select 18, ignoring green background to make 19
+								System.out.println("Found " + batchColors.size() + " colors");
+								// Divide them up into families automatically then select 18, ignoring green
+								// background to make 19
 								ImageUtil.analyzeColors(batchColors);
 							}
 						}
@@ -276,6 +281,15 @@ public class StartupScreen extends JFrame {
 
 		return reduceColorButton;
 	}
+
+	/**
+	 * Does paint to family but iterates over the color family combinations to
+	 * eliminate the impact of choosing the "wrong" family color
+	 * 
+	 * And now I'm adding rotation on top
+	 * 
+	 * @return The button
+	 */
 
 	private JButton paintToFamilyIterationButton() {
 		JButton paintToFamilyButton = new JButton("Paint To Family Iteration");
@@ -303,15 +317,17 @@ public class StartupScreen extends JFrame {
 									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
 							List<List<Color>> baseColors = ImageUtil.generateColorCombos(
 									ImageUtil.initColorGroupColors(), bestConfigMatch.get().getColorFamily());
-							for (int i = 0; i < baseColors.size(); i++) {
+							
+								for (int i = 0; i < baseColors.size(); i++) {
 //							ImageUtil.paintToFamilyColorIteration(baseColors.get(i), imageFile,
 //									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
-								ImageUtil.paintToFamily(baseColors.get(i), imageFile,
-										bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "f" + i);
-								ImageUtil.paintInput(baseColors.get(i), imageFile,
-										bestConfigMatch.get().getColorFamily(), familyInputsDir, "f" + i);
+									ImageUtil.paintToFamilyRotation(baseColors.get(i), imageFile,
+											bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "f" + i);
+									ImageUtil.paintInputRotation(baseColors.get(i), imageFile,
+											bestConfigMatch.get().getColorFamily(), familyInputsDir, "f" + i);
+								}
 							}
-						}
+						
 					}
 				} catch (Exception ex) {
 					handleError(ex);
@@ -335,7 +351,7 @@ public class StartupScreen extends JFrame {
 	 * color(colorGroupColors index 0, currently a red). The family base colors are
 	 * basically just used as layer masks and their family colors are ignored for
 	 * the purpose of this. This is based on the idea that the family colors aren't
-	 * relevant and the model should learn to paint consistenly regardless of which
+	 * relevant and the model should learn to paint consistently regardless of which
 	 * family it's painting. Inputs to generation will need to be similarly split
 	 * and then re-assembled after generation.
 	 * 
@@ -367,7 +383,7 @@ public class StartupScreen extends JFrame {
 								Set<Color> colorGroup = bestConfigMatch.get().getColorFamily().getColorGroups().get(i);
 								if (!colorGroup.isEmpty()) {
 									// resize to 286x286 so p2p doesn't do scaling
-									ImageUtil.paintSingeGroup(i,
+									ImageUtil.paintSingleGroup(i,
 											ImageUtil.copyIntoCenter(image,
 													ImageUtil.blankImage(286, 286, ImageUtil.GREEN_BG)),
 											imageFile.getName(), trainsetOutputDir,
@@ -464,10 +480,10 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					File inputDir = fc.getSelectedFile();
-					 fc = new JFileChooser();
-						fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-						returnVal = fc.showOpenDialog(StartupScreen.this);
-						File outputDir = fc.getSelectedFile();
+					fc = new JFileChooser();
+					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					returnVal = fc.showOpenDialog(StartupScreen.this);
+					File outputDir = fc.getSelectedFile();
 					try {
 						generateButton.setText("Slicing....");
 						ImageUtil.sliceImages(inputDir, outputDir);
@@ -482,7 +498,7 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
-	
+
 	private JButton sliceImagePairsButton() {
 		JButton generateButton = new JButton("Slice Image Pairs");
 		generateButton.addActionListener(new ActionListener() {
@@ -508,7 +524,6 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
-	
 
 	private JButton combineImagesButton() {
 		JButton generateButton = new JButton("Recombine Files");
@@ -521,10 +536,10 @@ public class StartupScreen extends JFrame {
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					File inputDir = fc.getSelectedFile();
-					 fc = new JFileChooser();
-						fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-						returnVal = fc.showOpenDialog(StartupScreen.this);
-						File outputDir = fc.getSelectedFile();
+					fc = new JFileChooser();
+					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					returnVal = fc.showOpenDialog(StartupScreen.this);
+					File outputDir = fc.getSelectedFile();
 					try {
 						generateButton.setText("Combining....");
 						ImageUtil.combineImages(inputDir, outputDir);
@@ -539,8 +554,7 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
-	
-	
+
 	private void handleError(Exception e) {
 		e.printStackTrace();
 		getPanel().add(new TextArea(e.toString()));

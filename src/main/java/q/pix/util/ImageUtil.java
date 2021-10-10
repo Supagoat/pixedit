@@ -1,7 +1,9 @@
 package q.pix.util;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +52,7 @@ public class ImageUtil {
 		y = y < 0 ? 0 : y;
 		return copyImage(input, blankImage(size, size, GREEN_BG), x, y, size);
 	}
+
 
 	public static BufferedImage downscaleTo(BufferedImage input, int width, int height, Point center) {
 		if (input.getWidth() > width || input.getHeight() > height) {
@@ -206,17 +209,16 @@ public class ImageUtil {
 
 	public static BufferedImage copyImage(BufferedImage input, int xOffset, int yOffset) {
 		BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), input.getType());
-		return copyImage(input, output, xOffset, yOffset);
+		return copyImage(input, output, xOffset, yOffset, false);
 	}
 
-	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset) {
+	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset,
+			boolean cropBorder) {
 		// Skip a 4 pixel border because p2p has problems in certain cases because those
 		// pixels can't benefit from neighbors
-		for (int x = 3; x < input.getWidth() - 3; x++) {
-			for (int y = 3; y < input.getHeight() - 3; y++) {
-				// System.out.println("XY: "+x+","+y+" offset "+xOffset+","+yOffset+" WH:
-				// "+input.getWidth()+","+input.getHeight()+" op:
-				// "+output.getWidth()+","+output.getHeight());
+		int modifier = cropBorder ? 3 : 0;
+		for (int x = modifier; x < input.getWidth() - modifier; x++) {
+			for (int y = modifier; y < input.getHeight() - modifier; y++) {
 				if (x < input.getWidth() && y < input.getHeight()) {
 					output.setRGB(x + xOffset, y + yOffset, input.getRGB(x, y));
 				} else {
@@ -228,6 +230,28 @@ public class ImageUtil {
 
 	}
 
+	/**
+	 * Crops, centered around the center
+	 * @param input
+	 * @param out
+	 * @return out, though it is modified in place
+	 */
+	
+	public static BufferedImage cropTo(BufferedImage input, BufferedImage out) {
+		int xOffset = (input.getWidth()-out.getWidth())/2;
+		int yOffset = (input.getHeight()-out.getHeight())/2;
+		for(int y=0;y<out.getHeight();y++) {
+			for(int x=0;x<out.getWidth();x++) {
+				int inX = x+xOffset;
+				int inY = y+yOffset;
+				if(inX >=0 && inX < input.getWidth() && inY >=0 && inY < input.getHeight()) {
+					out.setRGB(x, y, input.getRGB(inX,inY));
+				}
+			}
+		}
+		return out;
+	}
+	
 	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int fromX, int fromY, int size) {
 		for (int x = fromX; x < size; x++) {
 			for (int y = fromY; y < size; y++) {
@@ -389,7 +413,7 @@ public class ImageUtil {
 			int w, int h, int xOffset, int yOffset, int x, int y) throws IOException {
 		BufferedImage slice = blankImage(GREEN_BG);
 
-		copyImage(input.getSubimage(workingX, workingY, w, h), slice, xOffset, yOffset);
+		copyImage(input.getSubimage(workingX, workingY, w, h), slice, xOffset, yOffset, false);
 		// addBorder(input, slice, x, y, w, h);
 		ImageIO.write(slice, "png",
 				new File(outputDir + File.separator + inputName.replace(".png", FILENAME_COORDS_SPLIT + x + "_" + y
@@ -509,29 +533,35 @@ public class ImageUtil {
 	public static void combineImages(File inputDir, File outputDir) throws IOException {
 		File[] inputs = inputDir.listFiles();
 		Arrays.sort(inputs);
-		String baseName = inputs[0].getName().substring(0, inputs[0].getName().indexOf(FILENAME_COORDS_SPLIT));
+		try {
+			String baseName = inputs[0].getName().substring(0, inputs[0].getName().indexOf(FILENAME_COORDS_SPLIT));
 
-		List<File> imgParts = new ArrayList<>();
-		for (int i = 0; i < inputs.length; i++) {
-			if (inputs[i].getName().endsWith("-inputs.png") || inputs[i].getName().endsWith("-targets.png")) {
-				continue;
-			}
-			if (inputs[i].getName().startsWith(baseName)) {
-				imgParts.add(inputs[i]);
-			} else {
-				Point size = parseSize(imgParts.get(0).getName());
-				BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
-				ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
+			List<File> imgParts = new ArrayList<>();
+			for (int i = 0; i < inputs.length; i++) {
+				if (inputs[i].getName().endsWith("-inputs.png") || inputs[i].getName().endsWith("-targets.png")) {
+					continue;
+				}
+				if (inputs[i].getName().startsWith(baseName)) {
+					imgParts.add(inputs[i]);
+				} else {
+					Point size = parseSize(imgParts.get(0).getName());
+					BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
+					ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
 
-				baseName = inputs[i].getName().substring(0, inputs[i].getName().indexOf(FILENAME_COORDS_SPLIT));
-				imgParts = new ArrayList<>();
-				imgParts.add(inputs[i]);
+					baseName = inputs[i].getName().substring(0, inputs[i].getName().indexOf(FILENAME_COORDS_SPLIT));
+					imgParts = new ArrayList<>();
+					imgParts.add(inputs[i]);
+				}
 			}
+
+			Point size = parseSize(imgParts.get(0).getName());
+			BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
+			ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
+		} catch (Exception e) {
+			System.err.println("Error file: "+inputs[0].getName());
+			e.printStackTrace();
+			throw e;
 		}
-
-		Point size = parseSize(imgParts.get(0).getName());
-		BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
-		ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
 	}
 
 	public static BufferedImage reconstructSlicedImage(List<File> inputFiles, int origWidth, int origHeight)
@@ -549,7 +579,7 @@ public class ImageUtil {
 																		// BufferedImage.TYPE_INT_RGB);
 		for (int i = 0; i < inputFiles.size(); i++) {
 
-			copyImage(ImageIO.read(inputFiles.get(i)), combined, coords.get(i).x - minX, coords.get(i).y - minY);
+			copyImage(ImageIO.read(inputFiles.get(i)), combined, coords.get(i).x - minX, coords.get(i).y - minY, true);
 		}
 
 		return combined.getSubimage(-minX, -minY, origWidth, origHeight);
@@ -633,7 +663,7 @@ public class ImageUtil {
 
 				Point dest = getXYCoords(iteration);
 				System.out.println("To dest " + iteration + " " + dest + " against source " + sourceX + " ," + sourceY);
-				copyImage(subImage, destination, dest.x, dest.y);
+				copyImage(subImage, destination, dest.x, dest.y, false);
 
 				sourceX += 10;
 				sourceX = frameCt % 7 == 0 ? sourceX + 1 : sourceX;
@@ -769,6 +799,55 @@ public class ImageUtil {
 		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator
 				+ inputFile.getName().replace(".png", outputSuffix + ".png")));
 	}
+	
+	
+	public static BufferedImage rotateImageByDegrees(BufferedImage img, double angle) {
+	    double rads = Math.toRadians(angle);
+	    double sin = Math.abs(Math.sin(rads)), cos = Math.abs(Math.cos(rads));
+	    int w = img.getWidth();
+	    int h = img.getHeight();
+	    int newWidth = (int) Math.floor(w * cos + h * sin);
+	    int newHeight = (int) Math.floor(h * cos + w * sin);
+
+	    BufferedImage rotated = blankImage(newWidth, newHeight, GREEN_BG);
+	    Graphics2D g2d = rotated.createGraphics();
+	    AffineTransform at = new AffineTransform();
+	    at.translate((newWidth - w) / 2, (newHeight - h) / 2);
+
+	    int x = w / 2;
+	    int y = h / 2;
+
+	    at.rotate(rads, x, y);
+	    g2d.setTransform(at);
+	    g2d.drawImage(img, 0, 0, null);
+	    g2d.setColor(GREEN_BG);
+	    g2d.drawRect(0, 0, newWidth - 1, newHeight - 1);
+	    g2d.dispose();
+	    BufferedImage out = blankImage(IMAGE_WIDTH, IMAGE_HEIGHT, GREEN_BG);
+	    //out = copyImage(rotated, out, -(rotated.getWidth()-out.getWidth())/2, -(rotated.getHeight()-out.getHeight())/2, false);//copyImage(rotated, , (newWidth-img.getWidth()/2), (newHeight-img.getHeight()/2),img.getHeight());
+	    return cropTo(rotated, out);
+	}
+	
+	
+	private static final int ROTATION_SIZE = 30;
+	/**
+	 * Repeats the paintToFamily over a series of rotations to help prevent overfitting.  Match with paintInputRotation
+	 * @param baseColors
+	 * @param inputFile
+	 * @param family
+	 * @param outDir
+	 * @param outputSuffix
+	 * @throws IOException
+	 */
+	public static void paintToFamilyRotation(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
+			String outputSuffix) throws IOException {
+		BufferedImage image = ImageIO.read(inputFile);
+		BufferedImage painted = paintToFamily(baseColors, image, family);
+		for(int rot = 0;rot < 360; rot += ROTATION_SIZE) {
+			ImageIO.write(rotateImageByDegrees(painted, rot), "png", new File(outDir.getAbsoluteFile() + File.separator
+					+ inputFile.getName().replace(".png", outputSuffix+rot + ".png")));
+		}
+	}
 
 	public static void paintInput(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
 			String outputSuffix) throws IOException {
@@ -777,6 +856,24 @@ public class ImageUtil {
 				+ inputFile.getName().replace(".png", outputSuffix + ".png")));
 	}
 
+	/**
+	 * Repeats the paintInput over a series of rotations to help prevent overfitting.  Match with paintToFamilyRotation
+	 * @param baseColors
+	 * @param inputFile
+	 * @param family
+	 * @param outDir
+	 * @param outputSuffix
+	 * @throws IOException
+	 */
+	public static void paintInputRotation(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
+			String outputSuffix) throws IOException {
+		BufferedImage painted = paintInput(baseColors, ImageIO.read(inputFile), family);
+		for(int rot = 0;rot < 360; rot += ROTATION_SIZE) {
+			ImageIO.write(rotateImageByDegrees(painted, rot), "png", new File(outDir.getAbsoluteFile() + File.separator
+					+ inputFile.getName().replace(".png", outputSuffix+rot + ".png")));
+		}
+	}
+	
 	// Not using analyze colors right now because LAB still ends up grouping some
 	// colors together in ways I don't like
 	public static void analyzeColors(File inputFile) throws IOException {
@@ -1081,7 +1178,7 @@ public class ImageUtil {
 	}
 
 	// Uses the input image's size to base
-	public static void paintSingeGroup(int familyColorGroupIdx, BufferedImage input, String inputName, File outputDir,
+	public static void paintSingleGroup(int familyColorGroupIdx, BufferedImage input, String inputName, File outputDir,
 			ColorFamily family) throws IOException {
 		BufferedImage out = new BufferedImage(input.getWidth() * 2, input.getHeight(), input.getType());
 		// copyImage(paintInput(initColorGroupColors(), input, family), out,
@@ -1095,8 +1192,8 @@ public class ImageUtil {
 			return; // don't output an empty training image
 		}
 
-		copyImage(groupColorPainted.get(), out, input.getWidth(), 0);
-		copyImage(paintSingeGroup(family.get(familyColorGroupIdx), input, family), out, 0, 0);
+		copyImage(groupColorPainted.get(), out, input.getWidth(), 0, false);
+		copyImage(paintSingeGroup(family.get(familyColorGroupIdx), input, family), out, 0, 0, false);
 
 		ImageIO.write(out, "png",
 				new File(outputDir + File.separator + inputName.replace(".png", "_cg" + familyColorGroupIdx + ".png")));
