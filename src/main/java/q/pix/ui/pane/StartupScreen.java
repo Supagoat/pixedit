@@ -58,6 +58,9 @@ public class StartupScreen extends JFrame {
 		getPanel().add(sliceImageButton());
 		getPanel().add(combineImagesButton());
 		getPanel().add(sliceImagePairsButton());
+		getPanel().add(sliceImagePairsButtonSmall());
+		getPanel().add(sliceTestSetButtonSmall());
+		
 		getPanel().add(quitButton());
 		setVisible(true);
 	}
@@ -525,6 +528,59 @@ public class StartupScreen extends JFrame {
 		return generateButton;
 	}
 
+	private JButton sliceImagePairsButtonSmall() {
+		JButton generateButton = new JButton("Slice IPairs Small");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File parentDir = fc.getSelectedFile();
+					try {
+						generateButton.setText("Slicing....");
+						ImageUtil.sliceImagePairsSmall(parentDir);
+						generateButton.setText("Slice Image Pairs");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return generateButton;
+	}
+	
+	private JButton sliceTestSetButtonSmall() {
+		JButton generateButton = new JButton("Slice Testset Small");
+		generateButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File parentDir = fc.getSelectedFile();
+					try {
+						generateButton.setText("Slicing....");
+						ImageUtil.sliceTestsetSmall(parentDir);
+						generateButton.setText("Slice Testset Small");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return generateButton;
+	}
+	
+	
 	private JButton combineImagesButton() {
 		JButton generateButton = new JButton("Recombine Files");
 		generateButton.addActionListener(new ActionListener() {

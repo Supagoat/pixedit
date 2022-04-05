@@ -7,6 +7,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -21,6 +23,12 @@ import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
+import org.color4j.colorimetry.encodings.CIELab;
+import org.color4j.colorimetry.encodings.RGB;
+import org.color4j.colorimetry.encodings.XYZ;
+import org.color4j.colorimetry.matching.ColorDifference;
+import org.color4j.colorimetry.matching.DifferenceAlgorithm;
+import org.color4j.colorimetry.matching.MatchingFactory;
 import org.imgscalr.Scalr;
 
 import q.pix.colorfamily.ColorFamily;
@@ -35,7 +43,8 @@ public class ImageUtil {
 	public static final Color GREEN_BG = new Color(0, 255, 0);
 	public static final String FILENAME_COORDS_SPLIT = "oOo";
 	public static final String FILENAME_SIZE_SPLIT = "sSs";
-
+	private static MatchingFactory fact = MatchingFactory.getInstance();
+    
 	public static BufferedImage loadAndScale(File imageFile) {
 		try {
 			return downscale(ImageIO.read(imageFile));
@@ -52,7 +61,6 @@ public class ImageUtil {
 		y = y < 0 ? 0 : y;
 		return copyImage(input, blankImage(size, size, GREEN_BG), x, y, size);
 	}
-
 
 	public static BufferedImage downscaleTo(BufferedImage input, int width, int height, Point center) {
 		if (input.getWidth() > width || input.getHeight() > height) {
@@ -232,26 +240,27 @@ public class ImageUtil {
 
 	/**
 	 * Crops, centered around the center
+	 * 
 	 * @param input
 	 * @param out
 	 * @return out, though it is modified in place
 	 */
-	
+
 	public static BufferedImage cropTo(BufferedImage input, BufferedImage out) {
-		int xOffset = (input.getWidth()-out.getWidth())/2;
-		int yOffset = (input.getHeight()-out.getHeight())/2;
-		for(int y=0;y<out.getHeight();y++) {
-			for(int x=0;x<out.getWidth();x++) {
-				int inX = x+xOffset;
-				int inY = y+yOffset;
-				if(inX >=0 && inX < input.getWidth() && inY >=0 && inY < input.getHeight()) {
-					out.setRGB(x, y, input.getRGB(inX,inY));
+		int xOffset = (input.getWidth() - out.getWidth()) / 2;
+		int yOffset = (input.getHeight() - out.getHeight()) / 2;
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				int inX = x + xOffset;
+				int inY = y + yOffset;
+				if (inX >= 0 && inX < input.getWidth() && inY >= 0 && inY < input.getHeight()) {
+					out.setRGB(x, y, input.getRGB(inX, inY));
 				}
 			}
 		}
 		return out;
 	}
-	
+
 	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int fromX, int fromY, int size) {
 		for (int x = fromX; x < size; x++) {
 			for (int y = fromY; y < size; y++) {
@@ -455,6 +464,64 @@ public class ImageUtil {
 
 	public static void sliceImagePairRandomly(BufferedImage input, BufferedImage target, String inputName,
 			File outputDirParent) throws IOException {
+		sliceImagePairRandomly(input, target, inputName, outputDirParent, 256);
+	}
+
+	public static void sliceImagePairsSmall(File parentDir) throws IOException {
+		File trainsetDir = new File(parentDir.getAbsolutePath() + File.separator + "trainset");
+		if (!trainsetDir.exists()) {
+			trainsetDir.mkdir();
+		}
+		for (File f : new File(parentDir.getAbsolutePath() + File.separator + "input_orig").listFiles()) {
+			BufferedImage input = ImageIO.read(f);
+			File targetF = new File(
+					parentDir.getAbsoluteFile() + File.separator + "target_orig" + File.separator + f.getName());
+			BufferedImage target = ImageIO.read(targetF);
+
+			sliceImagePairMethodicallySmall(input, target, f.getName(), trainsetDir, 32);
+		}
+	}
+	
+	public static void sliceTestsetSmall(File parentDir) throws IOException {
+		int size = 32;
+
+		File testsetDir = new File(parentDir.getAbsolutePath() + File.separator + "testset");
+		if (!testsetDir.exists()) {
+			testsetDir.mkdir();
+		}
+		for (File f : new File(parentDir.getAbsolutePath() + File.separator + "input_orig").listFiles()) {
+			BufferedImage input = ImageIO.read(f);
+			BufferedImage blankTarget = blankImage(input.getWidth(), input.getHeight(), GREEN_BG);
+			sliceImagePairMethodicallySmall(blankTarget, input, f.getName(), testsetDir, size);
+		}
+	}
+
+	public static void sliceImagePairMethodicallySmall(BufferedImage input, BufferedImage target, String inputName,
+			File outputDirParent, int size) throws IOException {
+		int y = 0;
+		while (y + size < input.getHeight()) {
+			int x = 0;
+			while (x + size < input.getWidth()) {
+
+				BufferedImage inputSlice = input.getSubimage(x, y, size, size);
+				if (!exceedsMaxAcceptableBackgroundColorPercent(inputSlice, 25)) {
+					BufferedImage combined = blankImage(size * 2, size, GREEN_BG);
+					copyImage(inputSlice, combined, 0, 0, false);
+					copyImage(target.getSubimage(x, y, size, size), combined, size, 0, false);
+					ImageIO.write(combined, "png",
+							new File(outputDirParent + File.separator
+									+ inputName.replace(".png",
+											FILENAME_COORDS_SPLIT + x + "_" + y + "_" + FILENAME_SIZE_SPLIT
+													+ inputSlice.getWidth() + "_" + inputSlice.getHeight() + ".png")));
+				}
+				x += size / 10;
+			}
+			y += size / 10;
+		}
+	}
+
+	public static void sliceImagePairRandomly(BufferedImage input, BufferedImage target, String inputName,
+			File outputDirParent, int toSize) throws IOException {
 		long t = System.currentTimeMillis();
 		File inputSliceOutputDir = new File(outputDirParent.getAbsolutePath() + File.separator + "input");
 		File targetSliceOutputDir = new File(outputDirParent.getAbsolutePath() + File.separator + "target");
@@ -486,8 +553,9 @@ public class ImageUtil {
 			int workingY = y < 0 ? 0 : y;
 			int workingX = x < 0 ? 0 : x;
 			int xOffset = x < 0 ? -x : 0;
-			int w = (workingX + 256) < input.getWidth() ? 256 : 256 - ((workingX + 256) - input.getWidth());
-			int h = (workingY + 256) < input.getHeight() ? 256 : 256 - ((workingY + 256) - input.getHeight());
+			int w = (workingX + toSize) < input.getWidth() ? toSize : toSize - ((workingX + toSize) - input.getWidth());
+			int h = (workingY + toSize) < input.getHeight() ? toSize
+					: toSize - ((workingY + toSize) - input.getHeight());
 			w = x < 0 ? w + x : w;
 			h = y < 0 ? h + y : h;
 
@@ -558,7 +626,7 @@ public class ImageUtil {
 			BufferedImage combined = reconstructSlicedImage(imgParts, size.x, size.y);
 			ImageIO.write(combined, "png", new File(outputDir + File.separator + baseName + "_combined.png"));
 		} catch (Exception e) {
-			System.err.println("Error file: "+inputs[0].getName());
+			System.err.println("Error file: " + inputs[0].getName());
 			e.printStackTrace();
 			throw e;
 		}
@@ -795,43 +863,46 @@ public class ImageUtil {
 
 	public static void paintToFamily(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
 			String outputSuffix) throws IOException {
-		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family);
+		BufferedImage painted = paintToFamily(baseColors, ImageIO.read(inputFile), family, inputFile.getName());
 		ImageIO.write(painted, "png", new File(outDir.getAbsoluteFile() + File.separator
 				+ inputFile.getName().replace(".png", outputSuffix + ".png")));
 	}
-	
-	
+
 	public static BufferedImage rotateImageByDegrees(BufferedImage img, double angle) {
-	    double rads = Math.toRadians(angle);
-	    double sin = Math.abs(Math.sin(rads)), cos = Math.abs(Math.cos(rads));
-	    int w = img.getWidth();
-	    int h = img.getHeight();
-	    int newWidth = (int) Math.floor(w * cos + h * sin);
-	    int newHeight = (int) Math.floor(h * cos + w * sin);
+		double rads = Math.toRadians(angle);
+		double sin = Math.abs(Math.sin(rads)), cos = Math.abs(Math.cos(rads));
+		int w = img.getWidth();
+		int h = img.getHeight();
+		int newWidth = (int) Math.floor(w * cos + h * sin);
+		int newHeight = (int) Math.floor(h * cos + w * sin);
 
-	    BufferedImage rotated = blankImage(newWidth, newHeight, GREEN_BG);
-	    Graphics2D g2d = rotated.createGraphics();
-	    AffineTransform at = new AffineTransform();
-	    at.translate((newWidth - w) / 2, (newHeight - h) / 2);
+		BufferedImage rotated = blankImage(newWidth, newHeight, GREEN_BG);
+		Graphics2D g2d = rotated.createGraphics();
+		AffineTransform at = new AffineTransform();
+		at.translate((newWidth - w) / 2, (newHeight - h) / 2);
 
-	    int x = w / 2;
-	    int y = h / 2;
+		int x = w / 2;
+		int y = h / 2;
 
-	    at.rotate(rads, x, y);
-	    g2d.setTransform(at);
-	    g2d.drawImage(img, 0, 0, null);
-	    g2d.setColor(GREEN_BG);
-	    g2d.drawRect(0, 0, newWidth - 1, newHeight - 1);
-	    g2d.dispose();
-	    BufferedImage out = blankImage(IMAGE_WIDTH, IMAGE_HEIGHT, GREEN_BG);
-	    //out = copyImage(rotated, out, -(rotated.getWidth()-out.getWidth())/2, -(rotated.getHeight()-out.getHeight())/2, false);//copyImage(rotated, , (newWidth-img.getWidth()/2), (newHeight-img.getHeight()/2),img.getHeight());
-	    return cropTo(rotated, out);
+		at.rotate(rads, x, y);
+		g2d.setTransform(at);
+		g2d.drawImage(img, 0, 0, null);
+		g2d.setColor(GREEN_BG);
+		g2d.drawRect(0, 0, newWidth - 1, newHeight - 1);
+		g2d.dispose();
+		BufferedImage out = blankImage(IMAGE_WIDTH, IMAGE_HEIGHT, GREEN_BG);
+		// out = copyImage(rotated, out, -(rotated.getWidth()-out.getWidth())/2,
+		// -(rotated.getHeight()-out.getHeight())/2, false);//copyImage(rotated, ,
+		// (newWidth-img.getWidth()/2), (newHeight-img.getHeight()/2),img.getHeight());
+		return cropTo(rotated, out);
 	}
-	
-	
-	private static final int ROTATION_SIZE = 30;
+
+	private static final int ROTATION_SIZE = 90;
+
 	/**
-	 * Repeats the paintToFamily over a series of rotations to help prevent overfitting.  Match with paintInputRotation
+	 * Repeats the paintToFamily over a series of rotations to help prevent
+	 * overfitting. Match with paintInputRotation
+	 * 
 	 * @param baseColors
 	 * @param inputFile
 	 * @param family
@@ -842,10 +913,10 @@ public class ImageUtil {
 	public static void paintToFamilyRotation(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
 			String outputSuffix) throws IOException {
 		BufferedImage image = ImageIO.read(inputFile);
-		BufferedImage painted = paintToFamily(baseColors, image, family);
-		for(int rot = 0;rot < 360; rot += ROTATION_SIZE) {
+		BufferedImage painted = paintToFamily(baseColors, image, family, inputFile.getName());
+		for (int rot = 0; rot < 360; rot += ROTATION_SIZE) {
 			ImageIO.write(rotateImageByDegrees(painted, rot), "png", new File(outDir.getAbsoluteFile() + File.separator
-					+ inputFile.getName().replace(".png", outputSuffix+rot + ".png")));
+					+ inputFile.getName().replace(".png", outputSuffix + rot + ".png")));
 		}
 	}
 
@@ -857,7 +928,9 @@ public class ImageUtil {
 	}
 
 	/**
-	 * Repeats the paintInput over a series of rotations to help prevent overfitting.  Match with paintToFamilyRotation
+	 * Repeats the paintInput over a series of rotations to help prevent
+	 * overfitting. Match with paintToFamilyRotation
+	 * 
 	 * @param baseColors
 	 * @param inputFile
 	 * @param family
@@ -868,12 +941,12 @@ public class ImageUtil {
 	public static void paintInputRotation(List<Color> baseColors, File inputFile, ColorFamily family, File outDir,
 			String outputSuffix) throws IOException {
 		BufferedImage painted = paintInput(baseColors, ImageIO.read(inputFile), family);
-		for(int rot = 0;rot < 360; rot += ROTATION_SIZE) {
+		for (int rot = 0; rot < 360; rot += ROTATION_SIZE) {
 			ImageIO.write(rotateImageByDegrees(painted, rot), "png", new File(outDir.getAbsoluteFile() + File.separator
-					+ inputFile.getName().replace(".png", outputSuffix+rot + ".png")));
+					+ inputFile.getName().replace(".png", outputSuffix + rot + ".png")));
 		}
 	}
-	
+
 	// Not using analyze colors right now because LAB still ends up grouping some
 	// colors together in ways I don't like
 	public static void analyzeColors(File inputFile) throws IOException {
@@ -1155,13 +1228,13 @@ public class ImageUtil {
 	}
 
 	public static Color incrementFamilyColor(Color c) {
-		if (c.getRed() < 250) {
-			return new Color(c.getRed() + 50, c.getGreen(), c.getBlue());
+		if (c.getRed() < 220) {
+			return new Color(c.getRed() + 45, c.getGreen(), c.getBlue());
 		}
-		if (c.getGreen() < 250) {
-			return new Color(c.getRed(), c.getGreen() + 50, c.getBlue());
+		if (c.getGreen() < 220) {
+			return new Color(c.getRed(), c.getGreen() + 45, c.getBlue());
 		}
-		return new Color(c.getRed() + 50, c.getGreen(), c.getBlue() + 50);
+		return new Color(c.getRed() + 45, c.getGreen(), c.getBlue() + 45);
 	}
 
 	public static List<Color> initColorGroupColors() {
@@ -1212,17 +1285,58 @@ public class ImageUtil {
 		}
 		return out;
 	}
+	
+	private static Color randomColor(SecureRandom rand) {
+		byte[] r = new byte[4];
+		rand.nextBytes(r);
+		byte[] g = new byte[4];
+		rand.nextBytes(g);
+		byte[] b = new byte[4];
+		rand.nextBytes(b);
+		int R = Math.abs(ByteBuffer.wrap(r).getInt())%255;
+		int G = Math.abs(ByteBuffer.wrap(g).getInt())%255;
+		int B = Math.abs(ByteBuffer.wrap(b).getInt())%255;
+		//System.out.println(R+","+G+","+B);
+		return new Color(R,G,B);
+	}
+	
+	public static Color randomColor(List<Color> baseColors) {
+		SecureRandom rand = new SecureRandom();
+        XYZ WHITE = new XYZ(94.811, 100.0, 107.304);
+        ColorDifference cd = null;
+        Color c = null;
+        while(cd == null || cd.getValue("DeltaE") < 20) {
+        	double minDiff = 9999999;
+        	for(Color bc : baseColors) {
+        		c = randomColor(rand);
+	            DifferenceAlgorithm differenceAlgo = fact.getAlgorithm("CIELab DE");
+	            CIELab tlab = new RGB(bc.getRed(), bc.getGreen(), bc.getBlue()).toXYZ().toCIELab(WHITE);
+	            CIELab blab = new RGB(c.getRed(), c.getGreen(), c.getBlue()).toXYZ().toCIELab(WHITE);
+	            cd = differenceAlgo.compute(tlab, blab);
+	            double d = cd.getValue("DeltaE");
+	            minDiff = minDiff > d ? d : minDiff;
+        	}
+            
+        }
+        return c;
+	}
 
-	public static BufferedImage paintToFamily(List<Color> baseColors, BufferedImage input, ColorFamily family) {
+	public static BufferedImage paintToFamily(List<Color> baseColors, BufferedImage input, ColorFamily family, String fileName) {
 		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
 		for (int y = 0; y < out.getHeight(); y++) {
 			for (int x = 0; x < out.getWidth(); x++) {
 				Color inputC = new Color(input.getRGB(x, y));
 				if (isBackgroundColor(inputC.getRGB())) {
-					out.setRGB(x, y, inputC.getRGB());
+					//out.setRGB(x, y, inputC.getRGB()); 
+					// Trying random background instead of a base color
+					out.setRGB(x,y,randomColor(baseColors).getRGB());
 				} else {
+					try {
 					out.setRGB(x, y,
 							family.offsetLuminance(baseColors.get(family.getColorGroup(inputC)), inputC).getRGB());
+					} catch(Exception e) {
+						System.err.println("Need color family set for "+fileName+" "+x+","+y);
+					}
 				}
 			}
 		}
@@ -1253,7 +1367,8 @@ public class ImageUtil {
 			for (int x = 0; x < out.getWidth(); x++) {
 				Color inputC = new Color(input.getRGB(x, y));
 				if (isBackgroundColor(inputC.getRGB())) {
-					out.setRGB(x, y, inputC.getRGB());
+					out.setRGB(x,y,randomColor(baseColors).getRGB());
+					//out.setRGB(x, y, inputC.getRGB());
 				} else {
 					out.setRGB(x, y, baseColors.get(family.getColorGroup(inputC)).getRGB());
 				}
@@ -1261,6 +1376,7 @@ public class ImageUtil {
 		}
 		return out;
 	}
+	
 
 	public static Point findUpperBound(Set<Point> points) {
 		int minX = Integer.MAX_VALUE;
@@ -1378,6 +1494,30 @@ public class ImageUtil {
 		}
 
 		applyDoubleOutline(out, inputFile.getName(), outFilePath);
+	}
+
+	public static boolean isBackgroundColorImage(BufferedImage img) {
+		for (int y = 0; y < img.getHeight(); y++) {
+			for (int x = 0; x < img.getWidth(); x++) {
+				if (!isBackgroundColor(img.getRGB(x, y))) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	public static boolean exceedsMaxAcceptableBackgroundColorPercent(BufferedImage img, double Pct0To100) {
+		double isBackground = 0;
+		for (int y = 0; y < img.getHeight(); y++) {
+			for (int x = 0; x < img.getWidth(); x++) {
+				if (isBackgroundColor(img.getRGB(x, y))) {
+					isBackground++;
+				}
+			}
+		}
+		double pct = (isBackground/(img.getWidth()*img.getHeight()))*100;
+		return pct >=  Pct0To100;
 	}
 
 	public static boolean isBackgroundColor(int rgb) {
