@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -80,8 +81,12 @@ public class FileUtil {
 								Integer.parseInt(colorStr[2])));
 					}
 					line = in.readLine();
+					
 				}
 				in.close();
+				if (currentFamily != null && !configFamily.getColorGroups().contains(currentFamily)) {
+					configFamily.addGroup(currentFamily);
+				}
 				for(int i=configFamily.size();i<8;i++) {
 					configFamily.addGroup(new HashSet<>());
 				}

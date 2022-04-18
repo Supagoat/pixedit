@@ -72,7 +72,7 @@ public class PaintingPanel extends GraphicsPanel {
 		if (!getWorkspaceWindow().getBackgroundColor().isPresent()) {
 			overlayBackgroundSelect(e);
 			if (e.getButton() != MouseEvent.NOBUTTON && !getWorkspaceWindow().getBackgroundColor().isPresent()) {
-				getWorkspaceWindow().setBackgroundColor(getTargetImage().getRGB(e.getX() / getZoomLevel() + getxView(),
+				getWorkspaceWindow().setBackgroundColor(getTargetImage().getTargetImage().getRGB(e.getX() / getZoomLevel() + getxView(),
 						e.getY() / getZoomLevel() + getyView()));
 				setBgSelectTime(System.currentTimeMillis());
 			}

@@ -11,8 +11,8 @@ import java.util.Map;
 public class ImageColorFamily {
 	//private ColorFamily baseFamily;
 	private Map<Integer, FamilyCount> familyIdxToPixCount = new HashMap<>();
-	//private Map<Color, Color> inputColorToFamilyColor  = new HashMap<>();
-	private List<FamilyCount> familyCounts = new ArrayList<>();
+	private Map<Integer, Integer> groupNumberToFrequencyRank  = new HashMap<>();
+	//private List<FamilyCount> familyCounts = new ArrayList<>();
 	public ImageColorFamily(ColorFamily baseFamily, BufferedImage img) {
 		for(int y=0;y<img.getHeight();y++) {
 			for(int x=0;x<img.getWidth();x++) {
@@ -25,16 +25,21 @@ public class ImageColorFamily {
 			}
 		}
 		
+		List<FamilyCount> familyCounts = new ArrayList<>();
 		for(FamilyCount f : familyIdxToPixCount.values()) {
 			familyCounts.add(f);
 		}
 		Collections.sort(familyCounts);
+		for(int i=0;i<familyCounts.size();i++) {
+			groupNumberToFrequencyRank.put(familyCounts.get(i).getGroupNum(), i);
+		}
 		
 	}
 	
-	public List getFamilyCounts() {
-		return familyCounts;
+	public int getGroupNumRank(int groupNum) {
+		return groupNumberToFrequencyRank.get(groupNum);
 	}
+	
 	
 	private class FamilyCount implements Comparable {
 		private int groupNum;

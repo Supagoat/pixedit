@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.swing.JPanel;
 
+import q.pix.colorfamily.TargetImage;
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
 import q.pix.util.ImageUtil;
 
@@ -22,7 +23,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	private WorkspacePaintWindow workspaceWindow;
 	private int zoomLevel = 1;
 	private BufferedImage inputImage;
-	private BufferedImage targetImage;
+	private TargetImage targetImage;
 
 	private BufferedImage scaledInput;
 	private BufferedImage scaledTarget;
@@ -46,7 +47,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	public GraphicsPanel(WorkspacePaintWindow workspaceWindow, BufferedImage inputImage, BufferedImage targetImage) {
 		this(workspaceWindow);
 		setInputImage(inputImage);
-		setTargetImage(targetImage);
+		setTargetImage(new TargetImage(targetImage));
 
 	}
 
@@ -120,7 +121,7 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 	}
 
 	protected BufferedImage scaleTarget() {
-		BufferedImage img = scaleImage(getTargetImage(), getZoomLevel());
+		BufferedImage img = scaleImage(getTargetImage().getTargetImage(), getZoomLevel());
 		deGreen(img);
 		setScaledTarget(img);
 		return img;
@@ -201,11 +202,11 @@ public class GraphicsPanel extends JPanel implements MouseListener, MouseMotionL
 		this.inputImage = inputImage;
 	}
 
-	public BufferedImage getTargetImage() {
+	public TargetImage getTargetImage() {
 		return targetImage;
 	}
 
-	public void setTargetImage(BufferedImage targetImage) {
+	public void setTargetImage(TargetImage targetImage) {
 		this.targetImage = targetImage;
 	}
 

@@ -24,6 +24,7 @@ import javax.swing.JPanel;
 
 import q.pix.colorfamily.ColorFamily;
 import q.pix.colorfamily.FamilyAffinity;
+import q.pix.colorfamily.TargetImage;
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
 import q.pix.util.FileUtil;
 import q.pix.util.ImageUtil;
@@ -38,6 +39,9 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 	private JButton zoomInButton;
 	private JButton zoomOutButton;
 	private JButton saveButton;
+	private JButton pixelHighlightButton;
+	private JButton colorSafeButton;
+	
 	private Optional<Integer> backgroundColor = Optional.empty();
 	private boolean drawOutsideLines;
 
@@ -84,6 +88,8 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		getTopPanel().setLayout(new FlowLayout());
 		getTopPanel().add(setZoomInButton(makeZoomButton("Z+", 1)));
 		getTopPanel().add(setZoomOutButton(makeZoomButton("Z-", -1)));
+		getTopPanel().add(setPixelHighlightButton(makePixelHighlightButton()));
+		getTopPanel().add(setColorSafeButton(makeColorSafeButton()));
 		add(getTopPanel(), BorderLayout.PAGE_START);
 		colorFamilyButtons = new ArrayList<>();
 		colorGroupColors = ImageUtil.initColorGroupColors();
@@ -124,7 +130,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			add(newPanel, BorderLayout.CENTER);
 			addListener(newPanel);
 			newPanel.setZoomLevel(4);
-		} 
+		}
 		redrawOutput();
 
 		return this;
@@ -134,7 +140,7 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 		setColorFamily(family);
 		getGraphicsPanel().setInputImage(inputImage);
-		getGraphicsPanel().setTargetImage(ImageUtil.copyImage(inputImage));
+		getGraphicsPanel().setTargetImage(new TargetImage(ImageUtil.copyImage(inputImage)));
 
 		// dispPanel.setBackgroundColor(inputImage); // I SHOULDUSE THIS FOR THE GREEN
 
@@ -171,6 +177,39 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		return zoomInButton;
 	}
 
+	private JButton makePixelHighlightButton() {
+		JButton highlightButton = new JButton("Highlight");
+		highlightButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(highlightButton.getText().equals("Highlight")) {
+					highlightButton.setText("Normal");
+				} else {
+					highlightButton.setText("Highlight");
+				}
+					repaint();
+				}
+		});
+		addListener(highlightButton);
+		return highlightButton;
+	}
+	
+	private JButton makeColorSafeButton() {
+		JButton colorSafeButton = new JButton("Color Safe ON");
+		colorSafeButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(colorSafeButton.getText().equals("Color Safe ON")) {
+					colorSafeButton.setText("Color Safe OFF");
+				} else {
+					colorSafeButton.setText("Color Safe ON");
+				}
+				}
+		});
+		addListener(colorSafeButton);
+		return colorSafeButton;
+	}
+
 	private JButton makeColorButton(String label, int family, Color color, ColorFamilyWindow window) {
 		JButton colorButton = new JButton(label);
 		colorButton.addActionListener(new ActionListener() {
@@ -205,11 +244,14 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 			group.remove(c);
 		}
 		getColorFamily().get(getCurrentColorFamily()).add(c);
-		
-		Set<Color> imageColors = ImageUtil.getDistinctColors(getGraphicsPanel().getTargetImage());
+
+		Set<Color> imageColors = ImageUtil.getDistinctColors(getGraphicsPanel().getTargetImage().getTargetImage());
 		FamilyAffinity affinity = new FamilyAffinity(imageColors, getColorFamily());
-		System.out.println("Still to go: "+affinity.getMissingColors(imageColors));
-		
+		for (Color mc : affinity.getMissingColors(imageColors)) {
+			int[] loc = ImageUtil.findColor(mc, getGraphicsPanel().getTargetImage().getTargetImage());
+			System.out.println("Still to go: " + mc + " at  " + loc[0] + "," + loc[1]);
+		}
+
 		redrawOutput();
 	}
 
@@ -219,9 +261,9 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 		}
 		for (int y = 0; y < getGraphicsPanel().getInputImage().getHeight(); y++) {
 			for (int x = 0; x < getGraphicsPanel().getInputImage().getWidth(); x++) {
-				Color c = new Color(getGraphicsPanel().getTargetImage().getRGB(x, y));
+				Color c = new Color(getGraphicsPanel().getTargetImage().getTargetImage().getRGB(x, y));
 				int colorIdx = ImageUtil.getColorGroupIndex(getColorFamily(), c);
-				
+
 				if (colorIdx > 8) {
 					c = getColorGroupColors().get(colorIdx);
 				}
@@ -229,7 +271,6 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 					c = getColorGroupColors().get(colorIdx);
 				}
 
-				
 				getGraphicsPanel().getInputImage().setRGB(x, y, c.getRGB());
 			}
 		}
@@ -340,6 +381,23 @@ public class ColorFamilyWindow extends JFrame implements WorkspacePaintWindow {
 
 	public void setColorFamilyButtons(List<JButton> colorFamilyButtons) {
 		this.colorFamilyButtons = colorFamilyButtons;
+	}
+	public JButton getPixelHighlightButton() {
+		return pixelHighlightButton;
+	}
+
+	public JButton setPixelHighlightButton(JButton pixelHighlightButton) {
+		this.pixelHighlightButton = pixelHighlightButton;
+		return this.pixelHighlightButton;
+	}
+
+	public JButton getColorSafeButton() {
+		return colorSafeButton;
+	}
+
+	public JButton setColorSafeButton(JButton colorSafeButton) {
+		this.colorSafeButton = colorSafeButton;
+		return this.colorSafeButton;
 	}
 	
 	

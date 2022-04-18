@@ -68,18 +68,20 @@ public class PaintingQueue {
 				BufferedImage img = ImageIO.read(imgFile);
 				Set<Color> imgColors = ImageUtil.getDistinctColors(img);
 				FamilyAffinity closestFamily = ImageUtil.findClosestColorFamily(imgColors, getColorFamilies());
-				if (closestFamily.getColorFamily().containsAllColors(imgColors)) {
+				if (closestFamily != null && closestFamily.getColorFamily().containsAllColors(imgColors)) {
 					System.out.println("Skipping since I already have a family for "+imgFile.getName());
 					continue;
 				}
 				setCurrentFamily(new ColorFamily());
 				getCurrentFamily().setFamilyName(imgFile.getName());
-				if (closestFamily.isMatchingAffinity(imgColors)) {
+				if (closestFamily != null && closestFamily.isMatchingAffinity(imgColors)) {
 					setCurrentFamily(closestFamily.getColorFamily());
 				}
-
-				System.out.println(imgFile.getName()+" with color family "+getCurrentFamily().getFamilyName()+" match rate of "+closestFamily.calcFamilyColorPct(imgColors));
-				System.out.println("Not in family: "+closestFamily.getMissingColors(imgColors));
+				
+				if(closestFamily != null) {
+					System.out.println(imgFile.getName()+" with color family "+getCurrentFamily().getFamilyName()+" match rate of "+closestFamily.calcFamilyColorPct(imgColors));
+					System.out.println("Not in family: "+closestFamily.getMissingColors(imgColors));
+				}
 				BufferedImage inputImage = ImageUtil.loadAndScale(imgFile);
 				getImageConsumer().accept(inputImage, getCurrentFamily());
 				return;

@@ -1,7 +1,6 @@
 package q.pix.ui.pane;
 
 import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.TextArea;
 import java.awt.event.ActionEvent;
@@ -19,6 +18,7 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -35,6 +35,8 @@ public class StartupScreen extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 	JPanel panel;
+	private JTextField imageSize;
+	private JTextField imageCropSize;
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
@@ -60,8 +62,10 @@ public class StartupScreen extends JFrame {
 		getPanel().add(sliceImagePairsButton());
 		getPanel().add(sliceImagePairsButtonSmall());
 		getPanel().add(sliceTestSetButtonSmall());
-		
+		getPanel().add(dirSubsetButton());
 		getPanel().add(quitButton());
+		getPanel().add(setImageSize(imgSizeInput()));
+		getPanel().add(setImageCropSize(imgCropSizeInput()));
 		setVisible(true);
 	}
 
@@ -79,6 +83,7 @@ public class StartupScreen extends JFrame {
 		makeSetButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -105,10 +110,11 @@ public class StartupScreen extends JFrame {
 	 */
 
 	private JButton generateButton() {
-		JButton generateButton = new JButton("Generate p2p Generation Inputs");
+		JButton generateButton = new JButton("Make p2p Testset");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -410,6 +416,7 @@ public class StartupScreen extends JFrame {
 		splitButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				try {
 					JFileChooser fc = new JFileChooser();
 					fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -472,11 +479,19 @@ public class StartupScreen extends JFrame {
 		return colorFamilyButton;
 	}
 
+	private void setImageUtilSizes() {
+		ImageUtil.CROPPABLE_IMAGE_HEIGHT = Integer.parseInt(getImageCropSize().getText());
+		ImageUtil.CROPPABLE_IMAGE_WIDTH =  Integer.parseInt(getImageCropSize().getText());;
+		ImageUtil.IMAGE_HEIGHT =  Integer.parseInt(getImageSize().getText());;
+		ImageUtil.IMAGE_WIDTH =  Integer.parseInt(getImageSize().getText());;
+	}
+	
 	private JButton sliceImageButton() {
-		JButton generateButton = new JButton("Slice Files");
+		JButton generateButton = new JButton("Slice Single Rand");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -503,10 +518,11 @@ public class StartupScreen extends JFrame {
 	}
 
 	private JButton sliceImagePairsButton() {
-		JButton generateButton = new JButton("Slice Image Pairs");
+		JButton generateButton = new JButton("Slice Pair Rand");
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -533,6 +549,7 @@ public class StartupScreen extends JFrame {
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -559,6 +576,7 @@ public class StartupScreen extends JFrame {
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -579,6 +597,32 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
+	private JButton dirSubsetButton() {
+		JButton dirSubsetButton = new JButton("Subset Files");
+		dirSubsetButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser fc = new JFileChooser();
+				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int returnVal = fc.showOpenDialog(StartupScreen.this);
+
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
+					File parentDir = fc.getSelectedFile();
+					try {
+						dirSubsetButton.setText("Subsetting files");
+						ImageUtil.subsetFiles(parentDir);
+						dirSubsetButton.setText("Subset Files");
+					} catch (Exception ex) {
+						// TODO: Get alert modals done
+						// generateButton.setText("ERROR: " + ex.toString());
+						handleError(ex);
+					}
+				}
+			}
+		});
+		return dirSubsetButton;
+	}
+	
 	
 	
 	private JButton combineImagesButton() {
@@ -586,6 +630,7 @@ public class StartupScreen extends JFrame {
 		generateButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				setImageUtilSizes();
 				JFileChooser fc = new JFileChooser();
 				fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				int returnVal = fc.showOpenDialog(StartupScreen.this);
@@ -627,6 +672,17 @@ public class StartupScreen extends JFrame {
 
 		return quitButton;
 	}
+	
+	private JTextField imgSizeInput() {
+		JTextField imgSizeInput = new JTextField("286");
+		return imgSizeInput;
+	}
+	
+	private JTextField imgCropSizeInput() {
+		JTextField imageCropSize = new JTextField("256");
+		return imageCropSize;
+	}
+	
 
 	private void loadFileForSideBySideEdit(File selectedFile) {
 		try {
@@ -671,6 +727,24 @@ public class StartupScreen extends JFrame {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private JTextField getImageSize() {
+		return imageSize;
+	}
+
+	private JTextField setImageSize(JTextField imageSize) {
+		this.imageSize = imageSize;
+		return imageSize;
+	}
+
+	private JTextField getImageCropSize() {
+		return imageCropSize;
+	}
+
+	private JTextField setImageCropSize(JTextField imageCropSize) {
+		this.imageCropSize = imageCropSize;
+		return imageCropSize;
 	}
 
 }
