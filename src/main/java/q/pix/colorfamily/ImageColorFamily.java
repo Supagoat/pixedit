@@ -8,12 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ImageColorFamily {
-	//private ColorFamily baseFamily;
+public class ImageColorFamily extends ColorFamily {
 	private Map<Integer, FamilyCount> familyIdxToPixCount = new HashMap<>();
 	private Map<Integer, Integer> groupNumberToFrequencyRank  = new HashMap<>();
-	//private List<FamilyCount> familyCounts = new ArrayList<>();
 	public ImageColorFamily(ColorFamily baseFamily, BufferedImage img) {
+		super(baseFamily.getColorGroups());
 		for(int y=0;y<img.getHeight();y++) {
 			for(int x=0;x<img.getWidth();x++) {
 				Color c = new Color(img.getRGB(x, y));

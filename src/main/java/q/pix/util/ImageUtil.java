@@ -17,9 +17,11 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -47,6 +49,7 @@ public class ImageUtil {
 	public static int CROPPABLE_IMAGE_WIDTH = 286;
 	public static int CROPPABLE_IMAGE_HEIGHT = 286;
 	public static final Color GREEN_BG = new Color(0, 255, 0);
+	public static final Color FAMILY_FEATURE_COLOR = new Color(220,220,0);
 	public static final String FILENAME_COORDS_SPLIT = "oOo";
 	public static final String FILENAME_SIZE_SPLIT = "sSs";
 	private static MatchingFactory fact = MatchingFactory.getInstance();
@@ -118,6 +121,16 @@ public class ImageUtil {
 		}
 		return output;
 	}
+	
+	public static BufferedImage blankImageTransparent(int width, int height) {
+		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		for (int x = 0; x < output.getWidth(); x++) {
+			for (int y = 0; y < output.getHeight(); y++) {
+				output.setRGB(x, y, 0);
+			}
+		}
+		return output;
+	}
 
 	public static BufferedImage blankImageRandom(int width, int height) {
 		BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -129,6 +142,7 @@ public class ImageUtil {
 		}
 		return output;
 	}
+	
 
 	public static int calcOffsetWidth(int size) {
 		return (IMAGE_WIDTH - size) / 2;
@@ -182,7 +196,7 @@ public class ImageUtil {
 				if (target != null && target.exists()) {
 					targetImage = ImageIO.read(target);
 				} else {
-					targetImage = blankImage(inputImage.getWidth(), inputImage.getHeight(), GREEN_BG);
+					targetImage = blankImageRandom(inputImage.getWidth(), inputImage.getHeight());
 				}
 			} else {
 				targetImage = copyIntoCenter(ImageIO.read(target),
@@ -213,7 +227,7 @@ public class ImageUtil {
 		SecureRandom rand = new SecureRandom();
 		int cols = leftImage.getWidth() > imageWidth ? leftImage.getWidth() / (imageWidth / 2) : 1;
 		int rows = leftImage.getHeight() > imageHeight ? leftImage.getHeight() / (imageHeight / 2) : 1;
-
+		
 		for (int c = 0; c < cols; c++) {
 			for (int r = 0; r < rows; r++) {
 				BufferedImage output = new BufferedImage(imageWidth * 2, imageHeight, BufferedImage.TYPE_INT_RGB);
@@ -658,6 +672,27 @@ public class ImageUtil {
 		return -1; // whole image is background
 	}
 
+	
+	/** I'm putting this one on hold for the moment because I don't think it's a route I want to go
+	 * But the idea was that the slicing should try to factor the amount of content in the slice placement
+	 * so I don't get a bunch of slices that are just a bit of foot
+	public static void sliceImagePairMaximizingContent(BufferedImage input, BufferedImage target, String inputName,
+			File inputToDir, File targetToDir) throws IOException {
+		BufferedImage tracker = target.getSubimage(0, 0, target.getWidth(), target.getHeight());
+		Optional<Point[]> bounds = getBounds(input);
+		
+		while(bounds.isPresent()) {
+			BufferedImage topSub = tracker.getSubimage(0, bounds.get()[0].y, tracker.getWidth(), IMAGE_HEIGHT);
+			Optional<Point[]> subBounds = getBounds(topSub);
+			if(subBounds.isPresent()) {
+				cxcxxccxs
+			}
+			
+			bounds = getBounds(input);
+		}
+		
+	}*/
+	
 	public static void sliceImagePairMethodicallySmall(BufferedImage input, BufferedImage target, String inputName,
 			File inputToDir, File targetToDir) throws IOException {
 
@@ -965,21 +1000,7 @@ public class ImageUtil {
 	 * 
 	 * }
 	 */
-	/**
-	 * 
-	 * @param baseColors
-	 * @param inputFile
-	 * @param family
-	 * @param outDir
-	 */
 
-	public static void paintFamilyTrainings(List<Color> baseColors, File inputFile, ColorFamily family, File outDir) {
-		for (Set<Color> groupColors : family.getColorGroups()) {
-			if (!groupColors.isEmpty()) {
-
-			}
-		}
-	}
 
 	/**
 	 * Does the same thing as paint to family but does every combination of the
@@ -1249,6 +1270,37 @@ public class ImageUtil {
 		paintColorFamilies(input, output, family);
 		return output;
 	}
+	
+	
+	/**
+	 * Takes the directories of inputs and outputs and uses the inputs to mask away everything
+	 * except the family feature output
+	 * @param inputsDir Input files that correspond to the outputs
+	 * @param shadedOutputsDir The outputs from p2p
+	 */
+	public static void cleanColorFamilyOutput(File inputsDir, File shadedOutputsDir) throws IOException {
+		File cleanOutputDir = new File(shadedOutputsDir.getAbsolutePath()+"_cleaned");
+		cleanOutputDir.mkdir();
+		
+		Map<String,File> outputFiles = new HashMap<>();
+		Arrays.stream(shadedOutputsDir.listFiles()).forEach(f -> outputFiles.put(f.getName(), f));
+		for(File f : inputsDir.listFiles()) {
+			System.out.println(f.getName());
+			BufferedImage input = ImageIO.read(f);
+			BufferedImage p2pOutput = ImageIO.read(outputFiles.get(f.getName().replace(".png", "-outputs.png")));
+			BufferedImage out = blankImageTransparent(input.getWidth(), input.getHeight());
+			for(int y=0;y<input.getHeight();y++) {
+				for(int x=0;x<input.getWidth();x++) {
+					if(input.getRGB(x, y) == FAMILY_FEATURE_COLOR.getRGB()) {
+						out.setRGB(x, y, p2pOutput.getRGB(x, y));
+					}
+				}
+			}
+
+			ImageIO.write(out, "png",
+					new File(cleanOutputDir + File.separator + f.getName()));
+		}
+	}
 
 	public static ColorFamily analyzeColors(Set<Color> colorsFound) {
 		List<SimilarColors> similars = new ArrayList<>();
@@ -1496,13 +1548,19 @@ public class ImageUtil {
 		int G = randomColorPart(rand);
 		int B = randomColorPart(rand);
 		// System.out.println(R+","+G+","+B);
+		try {
 		return new Color(R, G, B);
+		} catch(IllegalArgumentException e) {
+			System.out.println("Colors: "+R+", "+G+", "+B);
+			throw e;
+		}
 	}
 
 	private static int randomColorPart(SecureRandom rand) {
 		byte[] r = new byte[4];
 		rand.nextBytes(r);
-		int c = Math.abs(ByteBuffer.wrap(r).getInt()) % 255;
+		int mult = (r[0] | 1) == 1 ? 1 : -1;
+		int c = 200+ (mult*Math.abs(ByteBuffer.wrap(r).getInt()) % 40);
 		c = c > 255 ? 255 : c;
 		return c;
 	}
@@ -1562,6 +1620,39 @@ public class ImageUtil {
 		}
 		return out;
 	}
+	
+	
+	public static Optional<BufferedImage> paintToFamily(List<Color> baseColors, BufferedImage input, ImageColorFamily family,
+			String fileName, int featuredColorIdx) {
+		
+		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
+		
+		boolean paintedFeatured = false;
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				int rank = family.getGroupNumRank(family.getColorGroup(inputC));
+				if (isBackgroundColor(inputC.getRGB())) {
+					// out.setRGB(x,y,randomColor(baseColors).getRGB());
+					out.setRGB(x, y, inputC.getRGB());
+				} else if(rank == featuredColorIdx) {
+					try {
+						out.setRGB(x, y, family.offsetLuminance(FAMILY_FEATURE_COLOR, inputC).getRGB());
+						paintedFeatured = true;
+					} catch (Exception e) {
+						System.err.println("Need color family set for " + fileName + " " + x + "," + y);
+					}
+				} else {
+					out.setRGB(x, y, GREEN_BG.getRGB());
+				}
+			}
+		}
+		if(paintedFeatured) {
+			return Optional.of(out);
+		}
+		return Optional.empty();
+	}
+	
 
 	// Returns Optional.empty if the input image didn't contain the family group
 	// specified by groupColor
@@ -1596,6 +1687,27 @@ public class ImageUtil {
 		}
 		return out;
 	}
+	
+	public static BufferedImage paintInput(List<Color> baseColors, BufferedImage input, ImageColorFamily family, int featuredFamilyColorIdx) {
+		int featured = new Color(220,220,0).getRGB();
+		BufferedImage out = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
+		for (int y = 0; y < out.getHeight(); y++) {
+			for (int x = 0; x < out.getWidth(); x++) {
+				Color inputC = new Color(input.getRGB(x, y));
+				//int rank = family.getColorGroup(inputC);
+				int rank = family.getGroupNumRank(family.getColorGroup(inputC));
+				if (isBackgroundColor(inputC.getRGB())) {
+					// out.setRGB(x,y,randomColor(baseColors).getRGB());
+					out.setRGB(x, y, inputC.getRGB());
+				} else if(rank != featuredFamilyColorIdx) {
+					out.setRGB(x, y, baseColors.get(family.getColorGroup(inputC)).getRGB());
+				} else {
+					out.setRGB(x, y,featured);
+				}
+			}
+		}
+		return out;
+	}	
 
 	public static Point findUpperBound(Set<Point> points) {
 		int minX = Integer.MAX_VALUE;

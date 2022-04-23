@@ -23,6 +23,7 @@ import javax.swing.WindowConstants;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import q.pix.colorfamily.FamilyAffinity;
+import q.pix.colorfamily.ImageColorFamily;
 import q.pix.colorfamily.PaintingQueue;
 import q.pix.ui.event.ReturnToStartupListener;
 import q.pix.ui.pane.paintmode.PaintingPanel;
@@ -47,15 +48,17 @@ public class StartupScreen extends JFrame {
 		getPanel().setLayout(new GridLayout(3, 5));
 		getPanel().add(toTrainSetButton());
 		getPanel().add(generateButton());
-		getPanel().add(loadButton());
+		// getPanel().add(loadButton()); A manual drawing tagger.  Superceeded by my newer color family techniques.
 		getPanel().add(outlineButton());
 		getPanel().add(outlineDirButton());
 		getPanel().add(splitButton());
 		// getPanel().add(analyzeColorsButton()); // not using analyze right now
 		getPanel().add(colorFamilyButton());
 		getPanel().add(paintToFamilyButton());
-		getPanel().add(generateFamilyTrainSets());
-		getPanel().add(paintToFamilyIterationButton());
+		getPanel().add(paintFeaturedFamily());
+		getPanel().add(cleanFeaturedFamilyOutput());
+		//getPanel().add(generateFamilyTrainSets()); // not using this.  Featured family is better.
+		//getPanel().add(paintToFamilyIterationButton()); // I think this just confuses the algorithm
 		getPanel().add(reduceColorButton());
 		getPanel().add(sliceImageButton());
 		getPanel().add(combineImagesButton());
@@ -63,9 +66,11 @@ public class StartupScreen extends JFrame {
 		getPanel().add(sliceImagePairsButtonSmall());
 		getPanel().add(sliceTestSetButtonSmall());
 		getPanel().add(dirSubsetButton());
+		
 		getPanel().add(quitButton());
 		getPanel().add(setImageSize(imgSizeInput()));
 		getPanel().add(setImageCropSize(imgCropSizeInput()));
+	
 		setVisible(true);
 	}
 
@@ -103,9 +108,10 @@ public class StartupScreen extends JFrame {
 		});
 		return makeSetButton;
 	}
-	
+
 	/**
 	 * Creates the inputs to the generator given a directory of input files
+	 * 
 	 * @return The button
 	 */
 
@@ -243,6 +249,90 @@ public class StartupScreen extends JFrame {
 		return paintToFamilyButton;
 	}
 
+	private JButton paintFeaturedFamily() {
+		JButton paintToFamilyButton = new JButton("Paint Family Featured");
+		paintToFamilyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+
+					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_target");
+					File familyInputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath() + "_input");
+					if (familyInputsDir.exists() || shadedOutputsDir.exists()) {
+						throw new IllegalArgumentException("Can't ovewrite a family paint dir");
+					}
+					shadedOutputsDir.mkdir();
+					familyInputsDir.mkdir();
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File dir = FileUtil.getFamilyConfigDir(inputChooser.getSelectedFile());
+						for (File imageFile : inputChooser.getSelectedFile()
+								.listFiles((dirf, name) -> name.endsWith(".png"))) {
+							BufferedImage image = ImageIO.read(imageFile);
+							Optional<FamilyAffinity> bestConfigMatch = FileUtil
+									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
+							if (!bestConfigMatch.isPresent()) {
+								System.out.println("No family found for " + imageFile.getName());
+								continue;
+							}
+							List<Color> baseColors = ImageUtil.initColorGroupColors();
+							ImageColorFamily imageFamilyStats = new ImageColorFamily(
+									bestConfigMatch.get().getColorFamily(), image);
+							for (int i = 0; i < baseColors.size(); i++) {
+								Optional<BufferedImage> painted = ImageUtil.paintToFamily(baseColors, image,
+										imageFamilyStats, imageFile.getName(), i);
+								if (painted.isPresent()) {
+									ImageIO.write(painted.get(), "png", new File(shadedOutputsDir.getAbsoluteFile()
+											+ File.separator + imageFile.getName().replace(".png", "_" + i + ".png")));
+									BufferedImage inputPainted = ImageUtil.paintInput(baseColors, image,
+											imageFamilyStats, i);
+									ImageIO.write(inputPainted, "png", new File(familyInputsDir.getAbsoluteFile()
+											+ File.separator + imageFile.getName().replace(".png", "_" + i + ".png")));
+								}
+							}
+						}
+					}
+				} catch (Exception ex) {
+					handleError(ex);
+					paintToFamilyButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+
+		return paintToFamilyButton;
+	}
+
+	/**
+	 * Extracts out the featured family from the output with transparent background
+	 * so it can be colored and recombined to a single image in a later by a
+	 * different step
+	 */
+	public JButton cleanFeaturedFamilyOutput() {
+		JButton cleanFamilyOutput = new JButton("Clean FeatFamOutput");
+		cleanFamilyOutput.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File inputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					ImageUtil.cleanColorFamilyOutput(inputsDir, shadedOutputsDir);
+					
+				} catch (Exception ex) {
+					handleError(ex);
+					cleanFamilyOutput.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+		return cleanFamilyOutput;
+	}
+
 	public JButton reduceColorButton() {
 		JButton reduceColorButton = new JButton("Reduce Colors On Waifus");
 		reduceColorButton.addActionListener(new ActionListener() {
@@ -326,17 +416,17 @@ public class StartupScreen extends JFrame {
 									.loadConfigFiles(ImageUtil.getImageColors(image), dir);
 							List<List<Color>> baseColors = ImageUtil.generateColorCombos(
 									ImageUtil.initColorGroupColors(), bestConfigMatch.get().getColorFamily());
-							
-								for (int i = 0; i < baseColors.size(); i++) {
+
+							for (int i = 0; i < baseColors.size(); i++) {
 //							ImageUtil.paintToFamilyColorIteration(baseColors.get(i), imageFile,
 //									bestConfigMatch.get().getColorFamily(), shadedOutputsDir);
-									ImageUtil.paintToFamilyRotation(baseColors.get(i), imageFile,
-											bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "f" + i);
-									ImageUtil.paintInputRotation(baseColors.get(i), imageFile,
-											bestConfigMatch.get().getColorFamily(), familyInputsDir, "f" + i);
-								}
+								ImageUtil.paintToFamilyRotation(baseColors.get(i), imageFile,
+										bestConfigMatch.get().getColorFamily(), shadedOutputsDir, "f" + i);
+								ImageUtil.paintInputRotation(baseColors.get(i), imageFile,
+										bestConfigMatch.get().getColorFamily(), familyInputsDir, "f" + i);
 							}
-						
+						}
+
 					}
 				} catch (Exception ex) {
 					handleError(ex);
@@ -363,6 +453,9 @@ public class StartupScreen extends JFrame {
 	 * relevant and the model should learn to paint consistently regardless of which
 	 * family it's painting. Inputs to generation will need to be similarly split
 	 * and then re-assembled after generation.
+	 * 
+	 * Update 2022-04-22: I think my family feature approach is better because it
+	 * incorporates the context around the target color group
 	 * 
 	 */
 	private JButton generateFamilyTrainSets() {
@@ -481,11 +574,14 @@ public class StartupScreen extends JFrame {
 
 	private void setImageUtilSizes() {
 		ImageUtil.CROPPABLE_IMAGE_HEIGHT = Integer.parseInt(getImageCropSize().getText());
-		ImageUtil.CROPPABLE_IMAGE_WIDTH =  Integer.parseInt(getImageCropSize().getText());;
-		ImageUtil.IMAGE_HEIGHT =  Integer.parseInt(getImageSize().getText());;
-		ImageUtil.IMAGE_WIDTH =  Integer.parseInt(getImageSize().getText());;
+		ImageUtil.CROPPABLE_IMAGE_WIDTH = Integer.parseInt(getImageCropSize().getText());
+		;
+		ImageUtil.IMAGE_HEIGHT = Integer.parseInt(getImageSize().getText());
+		;
+		ImageUtil.IMAGE_WIDTH = Integer.parseInt(getImageSize().getText());
+		;
 	}
-	
+
 	private JButton sliceImageButton() {
 		JButton generateButton = new JButton("Slice Single Rand");
 		generateButton.addActionListener(new ActionListener() {
@@ -570,7 +666,7 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
-	
+
 	private JButton sliceTestSetButtonSmall() {
 		JButton generateButton = new JButton("Slice Testset Small");
 		generateButton.addActionListener(new ActionListener() {
@@ -597,6 +693,7 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
+
 	private JButton dirSubsetButton() {
 		JButton dirSubsetButton = new JButton("Subset Files");
 		dirSubsetButton.addActionListener(new ActionListener() {
@@ -622,9 +719,7 @@ public class StartupScreen extends JFrame {
 		});
 		return dirSubsetButton;
 	}
-	
-	
-	
+
 	private JButton combineImagesButton() {
 		JButton generateButton = new JButton("Recombine Files");
 		generateButton.addActionListener(new ActionListener() {
@@ -672,17 +767,16 @@ public class StartupScreen extends JFrame {
 
 		return quitButton;
 	}
-	
+
 	private JTextField imgSizeInput() {
 		JTextField imgSizeInput = new JTextField("286");
 		return imgSizeInput;
 	}
-	
+
 	private JTextField imgCropSizeInput() {
 		JTextField imageCropSize = new JTextField("256");
 		return imageCropSize;
 	}
-	
 
 	private void loadFileForSideBySideEdit(File selectedFile) {
 		try {
