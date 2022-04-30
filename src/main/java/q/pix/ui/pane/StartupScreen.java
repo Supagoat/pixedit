@@ -66,11 +66,10 @@ public class StartupScreen extends JFrame {
 		getPanel().add(sliceImagePairsButtonSmall());
 		getPanel().add(sliceTestSetButtonSmall());
 		getPanel().add(dirSubsetButton());
-		
+		getPanel().add(paletteAssemblyButton());
 		getPanel().add(quitButton());
 		getPanel().add(setImageSize(imgSizeInput()));
 		getPanel().add(setImageCropSize(imgCropSizeInput()));
-	
 		setVisible(true);
 	}
 
@@ -571,6 +570,18 @@ public class StartupScreen extends JFrame {
 
 		return colorFamilyButton;
 	}
+	
+	private JButton paletteAssemblyButton() {
+		JButton paletteAssemblyButton = new JButton("Palette Assemble");
+		paletteAssemblyButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				beginPaletteAssembly();
+			}
+		});
+
+		return paletteAssemblyButton;
+	}
 
 	private void setImageUtilSizes() {
 		ImageUtil.CROPPABLE_IMAGE_HEIGHT = Integer.parseInt(getImageCropSize().getText());
@@ -822,6 +833,24 @@ public class StartupScreen extends JFrame {
 			throw new RuntimeException(e);
 		}
 	}
+	
+	private void beginPaletteAssembly() {
+		try {
+			PaletteAssemblyWindow dispPanel = new PaletteAssemblyWindow();
+			//dispPanel.setOnSaveCallback(queue::queueStep);
+			dispPanel.display();
+			//queue.setup(selectedDir, savedFamiliesDir, dispPanel::setNewImage);
+			//dispPanel.makeSaveButton(queue::getCurrentFamily, savedFamiliesDir.getAbsolutePath(),
+			//		queue::getInputFileName, queue::queueStep);
+
+			dispPanel.addWindowListener(new ReturnToStartupListener(this));
+
+			setVisible(false);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 
 	private JTextField getImageSize() {
 		return imageSize;
