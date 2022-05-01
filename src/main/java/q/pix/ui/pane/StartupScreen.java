@@ -56,7 +56,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(colorFamilyButton());
 		getPanel().add(paintToFamilyButton());
 		getPanel().add(paintFeaturedFamily());
-		getPanel().add(cleanFeaturedFamilyOutput());
+		
 		//getPanel().add(generateFamilyTrainSets()); // not using this.  Featured family is better.
 		//getPanel().add(paintToFamilyIterationButton()); // I think this just confuses the algorithm
 		getPanel().add(reduceColorButton());
@@ -66,6 +66,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(sliceImagePairsButtonSmall());
 		getPanel().add(sliceTestSetButtonSmall());
 		getPanel().add(dirSubsetButton());
+		getPanel().add(cleanFeaturedFamilyOutput());
 		getPanel().add(paletteAssemblyButton());
 		getPanel().add(quitButton());
 		getPanel().add(setImageSize(imgSizeInput()));

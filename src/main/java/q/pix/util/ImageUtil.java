@@ -25,8 +25,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
@@ -1166,8 +1167,8 @@ public class ImageUtil {
 		ImageIO.write(analyzed, "png", new File(inputFile.getAbsolutePath().replace(".png", "_colors.png")));
 	}
 
-	public static Set<Color> getDistinctColors(BufferedImage img) {
-		Set<Color> colorsFound = new HashSet<>();
+	public static SortedSet<Color> getDistinctColors(BufferedImage img) {
+		SortedSet<Color> colorsFound = new TreeSet<>();
 		// Color inputBackground = new Color(img.getRGB(0, 0));
 		Color inputBackground = new Color(0, 255, 0);
 		for (int x = 0; x < img.getWidth(); x++) {
@@ -1283,8 +1284,9 @@ public class ImageUtil {
 		cleanOutputDir.mkdir();
 		
 		Map<String,File> outputFiles = new HashMap<>();
-		Arrays.stream(shadedOutputsDir.listFiles()).forEach(f -> outputFiles.put(f.getName(), f));
-		for(File f : inputsDir.listFiles()) {
+		FilenameFilter filter = (File dir, String name) -> name.endsWith("png");
+		Arrays.stream(shadedOutputsDir.listFiles(filter)).forEach(f -> outputFiles.put(f.getName(), f));
+		for(File f : inputsDir.listFiles(filter)) {
 			System.out.println(f.getName());
 			BufferedImage input = ImageIO.read(f);
 			BufferedImage p2pOutput = ImageIO.read(outputFiles.get(f.getName().replace(".png", "-outputs.png")));
