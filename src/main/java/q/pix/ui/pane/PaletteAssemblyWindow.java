@@ -11,10 +11,10 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedSet;
 import java.util.TreeMap;
 
 import javax.imageio.ImageIO;
@@ -24,6 +24,8 @@ import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.colorchooser.AbstractColorChooserPanel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -51,10 +53,10 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 	private JPanel topPanel;
 	private JPanel leftPanel;
 	private JPanel bottomPanel;
+	private JPanel rightPanel;
 
 	private Palette palette;
 	private Map<String, BufferedImage> images;
-
 
 	private String paletteOutputPath;
 
@@ -113,6 +115,11 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 		getBottomPanel().setLayout(new BoxLayout(getBottomPanel(), BoxLayout.X_AXIS));
 		add(getBottomPanel(), BorderLayout.SOUTH);
 
+		setRightPanel(new JPanel());
+		getRightPanel().setSize(80, 800);
+		getRightPanel().setVisible(true);
+		getRightPanel().setLayout(new BoxLayout(getRightPanel(), BoxLayout.Y_AXIS));
+		add(getRightPanel(), BorderLayout.EAST);
 
 		// add(getColorPanel(), BorderLayout.SOUTH);
 //		setColorPanel(new JPanel());
@@ -155,7 +162,6 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 //		addListener(colorButton);
 //		return colorButton;
 //	}
-
 
 	public PaletteAssemblyWindow setGraphicsPanel(GraphicsPanel newPanel) {
 
@@ -218,12 +224,13 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 
 				try {
 					loadImages(featuredFamilyPart);
-					
+
 					parentWindow.setPaletteOutputPath(setupPalette(featuredFamilyPart));
 					makeImageComponentSelectButtons();
-					
-					//setSelectedPartImg(getImages().get(getImages().keySet().iterator().next())); // This is the image on
-																									// the right //));
+
+					// setSelectedPartImg(getImages().get(getImages().keySet().iterator().next()));
+					// // This is the image on
+					// the right //));
 					setComposedPartsImg(composeMasked());
 					parentWindow.redrawOutput();
 
@@ -238,40 +245,48 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 	private void makeImageComponentSelectButtons() {
 		getLeftPanel().removeAll();
 		for (int i = 0; i < getImages().size(); i++) {
-			getLeftPanel().add(makeImageComponentSelectButton(i));//new JButton("B" + i));
+			getLeftPanel().add(makeImageComponentSelectButton(i));// new JButton("B" + i));
 		}
 		getLeftPanel().revalidate();
 	}
-	
+
 	private void makePaletteColorButtons() {
 		getBottomPanel().removeAll();
-		for(Color yellowColor : ImageUtil.getImageColors(getSelectedPartImg())) {
-			JButton cb = makePaletteColorChooseButton(yellowColor.getRGB());
+		for (Color yellowColor : ImageUtil.getImageColors(getSelectedPartImg())) {
+			JTextField cb = makePaletteColorChooseButton(yellowColor.getRGB());
 			getBottomPanel().add(cb);
 		}
 		getBottomPanel().revalidate();
 	}
-	
-	private JButton makePaletteColorChooseButton(int yellowColor) {
-		JButton cButton = new JButton("" + yellowColor);
-		cButton.setBackground(new Color(yellowColor));
-		cButton.setForeground(new Color(yellowColor));
-		cButton.addActionListener(new ActionListener() {
+
+	private JTextField makePaletteColorChooseButton(int yellowColor) {
+		JTextField colorInput = new JTextField(7);
+		// cButton.setBackground(new Color(yellowColor));
+		colorInput.setForeground(new Color(yellowColor));
+		colorInput.setText("#"+Integer.toHexString(yellowColor).substring(2));
+		colorInput.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Color newColor = JColorChooser.showDialog(PaletteAssemblyWindow.this, "Choose color",
-						Color.RED);
-				
-				getPalette().setPaletteColor(getSelectPartImgName(), Integer.parseInt(cButton.getText()), newColor.getRGB());
-				setComposedPartsImg(composeMasked());
-				PaletteAssemblyWindow.this.redrawOutput();
-
+				    String text = colorInput.getText();
+				    //textArea.append(text + newline);
+				    //textField.selectAll();
+				    Color newColor = null;
+				    try {
+				    	newColor = Color.decode(text);
+				    } catch(Exception ex) {}
+				///Color newColor = JColorChooser.showDialog(PaletteAssemblyWindow.this, "Choose color", Color.RED);
+				if (newColor != null) {
+					getPalette().setPaletteColor(getSelectPartImgName(), yellowColor,
+							newColor.getRGB());
+					setComposedPartsImg(composeMasked());
+					PaletteAssemblyWindow.this.redrawOutput();
+				}
 			}
 
 		});
-		return cButton;
+		return colorInput;
 	}
-	
+
 	private JButton makeImageComponentSelectButton(int idx) {
 		JButton cButton = new JButton("" + idx);
 		cButton.addActionListener(new ActionListener() {
@@ -279,7 +294,7 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 			public void actionPerformed(ActionEvent e) {
 				Iterator<String> it = getImages().keySet().iterator();
 				String key = null;
-				for(int i=0;i<=idx;i++) {
+				for (int i = 0; i <= idx; i++) {
 					key = it.next();
 				}
 				setSelectedPartImg(getImages().get(key));
@@ -321,19 +336,22 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 					&& name.startsWith(getBaseOutputFileName(imgPathExample.getName()));
 			File[] matches = imgPathExample.getParentFile().listFiles(filter);
 			for (File match : matches) {
-				// No need to do this masking because I already do it as part of my image pipeline in the cleaning button
-				//BufferedImage output = ImageIO.read(match);
-				//BufferedImage input = ImageIO.read(new File(match.getAbsolutePath().replace("-outputs", "-inputs")));
+				// No need to do this masking because I already do it as part of my image
+				// pipeline in the cleaning button
+				// BufferedImage output = ImageIO.read(match);
+				// BufferedImage input = ImageIO.read(new
+				// File(match.getAbsolutePath().replace("-outputs", "-inputs")));
 
-				imgs.put(match.getName(), ImageIO.read(match));//.getName(), mask(input, output));
+				imgs.put(match.getName(), ImageIO.read(match));// .getName(), mask(input, output));
 			}
 			this.images = imgs;
-			
-			//setPaletteOutputPath(setupPalette(imgPathExample));
+
+			// setPaletteOutputPath(setupPalette(imgPathExample));
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
+
 // No actual need for this at the moment.
 	private BufferedImage mask(BufferedImage input, BufferedImage output) {
 		BufferedImage masked = new BufferedImage(output.getWidth(), output.getHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -352,7 +370,9 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 
 	/**
 	 * Loads the palette from a file
-	 * @param featuredFamilyPart One of the image files to base the palette file name off of
+	 * 
+	 * @param featuredFamilyPart One of the image files to base the palette file
+	 *                           name off of
 	 * @return absolute path to where the pilot should be saved
 	 */
 	private String loadPalette(File featuredFamilyPart) {
@@ -373,11 +393,13 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 		}
 		return paletteFilePath;
 	}
-	
+
 	/**
-	 * Calls the loading of the palette from a file then fills in the remaining unassigned colors found in the 
-	 * input images mapping them to themselves
-	 * @param featuredFamilyPart One of the image files to base the palette file name off of
+	 * Calls the loading of the palette from a file then fills in the remaining
+	 * unassigned colors found in the input images mapping them to themselves
+	 * 
+	 * @param featuredFamilyPart One of the image files to base the palette file
+	 *                           name off of
 	 * @return absolute path to where the pilot should be saved
 	 */
 	private String setupPalette(File featuredFamilyPart) {
@@ -577,6 +599,12 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 		this.bottomPanel = bottomPanel;
 	}
 
+	public JPanel getRightPanel() {
+		return rightPanel;
+	}
 
+	public void setRightPanel(JPanel rightPanel) {
+		this.rightPanel = rightPanel;
+	}
 
 }
