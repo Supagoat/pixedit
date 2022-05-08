@@ -1569,7 +1569,6 @@ public class ImageUtil {
 
 	public static Color randomColor(List<Color> baseColors) {
 		SecureRandom rand = new SecureRandom();
-		XYZ WHITE = new XYZ(94.811, 100.0, 107.304);
 		ColorDifference cd = null;
 		Color c = null;
 		while (cd == null || cd.getValue("DeltaE") < 20) {
@@ -1577,8 +1576,8 @@ public class ImageUtil {
 			for (Color bc : baseColors) {
 				c = randomColor(rand);
 				DifferenceAlgorithm differenceAlgo = fact.getAlgorithm("CIELab DE");
-				CIELab tlab = new RGB(bc.getRed(), bc.getGreen(), bc.getBlue()).toXYZ().toCIELab(WHITE);
-				CIELab blab = new RGB(c.getRed(), c.getGreen(), c.getBlue()).toXYZ().toCIELab(WHITE);
+				CIELab tlab = colorToLab(bc);
+				CIELab blab = colorToLab(c);
 				cd = differenceAlgo.compute(tlab, blab);
 				double d = cd.getValue("DeltaE");
 				minDiff = minDiff > d ? d : minDiff;
@@ -1587,7 +1586,30 @@ public class ImageUtil {
 		}
 		return c;
 	}
-
+	
+	public static CIELab hexToLab(String hex) {
+		return colorToLab(Color.decode(hex));
+	}
+	
+	public static CIELab colorToLab(Color c) {
+		XYZ WHITE = new XYZ(94.811, 100.0, 107.304);
+		return new RGB(c.getRed(), c.getGreen(), c.getBlue()).toXYZ().toCIELab(WHITE);
+	}
+	
+	public static Color parseHex(String hex) {
+		if(hex.startsWith("#")) {
+			hex = hex.substring(1);
+		}
+		return new Color(Integer.parseInt(hex, 16));
+	}
+	
+	public static String toHex(int color) {
+		return "#"+Integer.toHexString(color).substring(2);
+	}
+	public static String toHex(Color color) {
+		return toHex(color.getRGB());
+	}
+	
 	public static void backgroundToRandom(BufferedImage img, SecureRandom rand) {
 		int background = GREEN_BG.getRGB();
 		for(int y=0;y<img.getHeight();y++) {

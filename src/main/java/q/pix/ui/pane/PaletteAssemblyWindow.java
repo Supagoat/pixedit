@@ -11,8 +11,9 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -20,17 +21,16 @@ import java.util.TreeMap;
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.colorchooser.AbstractColorChooserPanel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import q.pix.colorfamily.TargetImage;
 import q.pix.obj.Palette;
+import q.pix.ui.button.PaletteColorTextInput;
 import q.pix.ui.pane.WorkspaceWindow.DisplayMode;
 import q.pix.ui.pane.paintmode.PaintingPanel;
 import q.pix.util.ImageUtil;
@@ -226,6 +226,7 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 					loadImages(featuredFamilyPart);
 
 					parentWindow.setPaletteOutputPath(setupPalette(featuredFamilyPart));
+					getPalette().mapLuminanceIdxs(getImages());
 					makeImageComponentSelectButtons();
 
 					// setSelectedPartImg(getImages().get(getImages().keySet().iterator().next()));
@@ -252,34 +253,46 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 
 	private void makePaletteColorButtons() {
 		getBottomPanel().removeAll();
-		for (Color yellowColor : ImageUtil.getImageColors(getSelectedPartImg())) {
-			JTextField cb = makePaletteColorChooseButton(yellowColor.getRGB());
-			getBottomPanel().add(cb);
+		List<String> partColors = getPalette().getImageLuminancesSorted(getSelectPartImgName());
+		List<PaletteColorTextInput> inputs = new ArrayList<>();
+		for (int i = 0; i < partColors.size(); i++) {
+
+			inputs.add(makePaletteColorChooseButton(ImageUtil.parseHex(partColors.get(i)), i));
+
 		}
+
+		inputs.stream().forEach(a -> getBottomPanel().add(a));
 		getBottomPanel().revalidate();
 	}
 
-	private JTextField makePaletteColorChooseButton(int yellowColor) {
-		JTextField colorInput = new JTextField(7);
+	private PaletteColorTextInput makePaletteColorChooseButton(Color yellowColor, int luminanceIndex) {
+		PaletteColorTextInput colorInput = new PaletteColorTextInput(yellowColor, luminanceIndex);
+		Optional<Color> paletteRGB = getPalette().getMappedColorForLuminanceIndex(getSelectPartImgName(), luminanceIndex);
 		// cButton.setBackground(new Color(yellowColor));
-		colorInput.setForeground(new Color(yellowColor));
-		colorInput.setText("#"+Integer.toHexString(yellowColor).substring(2));
+		colorInput.setForeground(yellowColor);
+		colorInput.setBackground(Color.DARK_GRAY);
+		Color colorForText = paletteRGB.isPresent() ? paletteRGB.get() : yellowColor;
+		colorInput.setText(ImageUtil.toHex(colorForText));
 		colorInput.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				    String text = colorInput.getText();
-				    //textArea.append(text + newline);
-				    //textField.selectAll();
-				    Color newColor = null;
-				    try {
-				    	newColor = Color.decode(text);
-				    } catch(Exception ex) {}
-				///Color newColor = JColorChooser.showDialog(PaletteAssemblyWindow.this, "Choose color", Color.RED);
-				if (newColor != null) {
-					getPalette().setPaletteColor(getSelectPartImgName(), yellowColor,
-							newColor.getRGB());
-					setComposedPartsImg(composeMasked());
-					PaletteAssemblyWindow.this.redrawOutput();
+				String text = colorInput.getText();
+				// textArea.append(text + newline);
+				// textField.selectAll();
+				Color newColor = null;
+				try {
+					newColor = ImageUtil.parseHex(text);
+
+					/// Color newColor = JColorChooser.showDialog(PaletteAssemblyWindow.this,
+					/// "Choose color", Color.RED);
+					if (newColor != null) {
+						getPalette().setPaletteColor(getSelectPartImgName(), colorInput.getLuminanceIndex(), text);
+						setComposedPartsImg(composeMasked());
+						PaletteAssemblyWindow.this.redrawOutput();
+					}
+				} catch (Exception ex) {
+					System.err.println("Invalid color: "+text);
+					ex.printStackTrace();
 				}
 			}
 
@@ -297,8 +310,7 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 				for (int i = 0; i <= idx; i++) {
 					key = it.next();
 				}
-				setSelectedPartImg(getImages().get(key));
-				setSelectPartImgName(key);
+				setSelectedPartImg(key, getImages().get(key));
 				makePaletteColorButtons();
 			}
 
@@ -319,8 +331,8 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 					int imgColor = img.getRGB(x, y);
 					int alpha = (imgColor & 0xFF000000);
 					if (alpha != 0) {
-						Optional<Integer> paletteRGB = getPalette().getColorAtPaletteIdx(imgName, imgColor);
-						composed.setRGB(x, y, paletteRGB.isPresent() ? paletteRGB.get() : imgColor);
+						Optional<Color> paletteRGB = getPalette().getMappedColorForLuminance(imgName, new Color(imgColor));
+						composed.setRGB(x, y, paletteRGB.isPresent() ? paletteRGB.get().getRGB() : imgColor);
 					}
 				}
 			}
@@ -542,8 +554,9 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 		return selectedPartImg;
 	}
 
-	public void setSelectedPartImg(BufferedImage selectedPartImg) {
+	public void setSelectedPartImg(String fileName, BufferedImage selectedPartImg) {
 		this.selectedPartImg = selectedPartImg;
+		setSelectPartImgName(fileName);
 		getGraphicsPanel().setInputImage(selectedPartImg);
 		getGraphicsPanel().repaint();
 	}
