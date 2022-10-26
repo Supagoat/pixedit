@@ -38,16 +38,18 @@ public class StartupScreen extends JFrame {
 	JPanel panel;
 	private JTextField imageSize;
 	private JTextField imageCropSize;
+	private JTextField jitterCopies;
 
 	public StartupScreen() {
 		super("Pix2pix Training Data Editor");
-		setSize(1000, 400);
+		setSize(1000, 800);
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setPanel(new JPanel());
 		getPanel().setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
-		getPanel().setLayout(new GridLayout(3, 5));
+		getPanel().setLayout(new GridLayout(5, 8));
 		getPanel().add(toTrainSetButton());
 		getPanel().add(generateButton());
+		
 		// getPanel().add(loadButton()); A manual drawing tagger.  Superceeded by my newer color family techniques.
 		getPanel().add(outlineButton());
 		getPanel().add(outlineDirButton());
@@ -56,7 +58,8 @@ public class StartupScreen extends JFrame {
 		getPanel().add(colorFamilyButton());
 		getPanel().add(paintToFamilyButton());
 		getPanel().add(paintFeaturedFamily());
-		
+		getPanel().add(outputIsolatedFamilyColors());
+
 		//getPanel().add(generateFamilyTrainSets()); // not using this.  Featured family is better.
 		//getPanel().add(paintToFamilyIterationButton()); // I think this just confuses the algorithm
 		getPanel().add(reduceColorButton());
@@ -71,6 +74,7 @@ public class StartupScreen extends JFrame {
 		getPanel().add(quitButton());
 		getPanel().add(setImageSize(imgSizeInput()));
 		getPanel().add(setImageCropSize(imgCropSizeInput()));
+		getPanel().add(setJitterCopies(jitterCopiesInput()));
 		setVisible(true);
 	}
 
@@ -140,6 +144,8 @@ public class StartupScreen extends JFrame {
 		});
 		return generateButton;
 	}
+	
+
 
 	private JButton loadButton() {
 		JButton loadButton = new JButton("Load For Drawing");
@@ -308,8 +314,8 @@ public class StartupScreen extends JFrame {
 	 * Extracts out the featured family from the output with transparent background
 	 * so it can be colored and recombined to a single image in a later by a
 	 * different step
-	 */
-	public JButton cleanFeaturedFamilyOutput() {
+	 */ // Commmenting out the 2-directory version from tensorflow and switching to pytorch output style handling
+	/*public JButton cleanFeaturedFamilyOutput() {
 		JButton cleanFamilyOutput = new JButton("Clean FeatFamOutput");
 		cleanFamilyOutput.addActionListener(new ActionListener() {
 			@Override
@@ -323,6 +329,61 @@ public class StartupScreen extends JFrame {
 					returnVal = inputChooser.showOpenDialog(StartupScreen.this);
 					File shadedOutputsDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
 					ImageUtil.cleanColorFamilyOutput(inputsDir, shadedOutputsDir);
+					
+				} catch (Exception ex) {
+					handleError(ex);
+					cleanFamilyOutput.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+		return cleanFamilyOutput;
+	}*/
+	
+	
+	/**
+	 * Takes a directory of images in the colors defined in ImageUtil.initColorGroupColors()
+	 * and iterates over every family color and outputs a set of images in which each of the images one of the family
+	 * colors is ImageUtil.FAMILY_FEATURE_COLOR.  The intention is to prep set of images to be used as tests
+	 * @return the button
+	 */
+	
+	public JButton outputIsolatedFamilyColors() {
+		JButton cleanFamilyOutput = new JButton("Output Isolated Family");
+		cleanFamilyOutput.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File imgDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					ImageUtil.isolateFamilyColors(imgDir);
+					
+				} catch (Exception ex) {
+					handleError(ex);
+					cleanFamilyOutput.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+		return cleanFamilyOutput;
+	}
+	
+	/**
+	 * Extracts out the featured family from the output with transparent background
+	 * so it can be colored and recombined to a single image in a later by a
+	 * different step.  This is the pytorch style v
+	 */ 
+	public JButton cleanFeaturedFamilyOutput() {
+		JButton cleanFamilyOutput = new JButton("Clean FeatFamOutput");
+		cleanFamilyOutput.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File imgDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					ImageUtil.cleanColorFamilyOutput(imgDir);
 					
 				} catch (Exception ex) {
 					handleError(ex);
@@ -587,11 +648,13 @@ public class StartupScreen extends JFrame {
 	private void setImageUtilSizes() {
 		ImageUtil.CROPPABLE_IMAGE_HEIGHT = Integer.parseInt(getImageCropSize().getText());
 		ImageUtil.CROPPABLE_IMAGE_WIDTH = Integer.parseInt(getImageCropSize().getText());
-		;
+		
 		ImageUtil.IMAGE_HEIGHT = Integer.parseInt(getImageSize().getText());
-		;
+		
 		ImageUtil.IMAGE_WIDTH = Integer.parseInt(getImageSize().getText());
-		;
+		
+		ImageUtil.JITTER_COPIES = Integer.parseInt(getJitterCopies().getText());
+		
 	}
 
 	private JButton sliceImageButton() {
@@ -789,6 +852,11 @@ public class StartupScreen extends JFrame {
 		JTextField imageCropSize = new JTextField("256");
 		return imageCropSize;
 	}
+	
+	private JTextField jitterCopiesInput() {
+		JTextField imageCropSize = new JTextField("0");
+		return imageCropSize;
+	}
 
 	private void loadFileForSideBySideEdit(File selectedFile) {
 		try {
@@ -865,10 +933,21 @@ public class StartupScreen extends JFrame {
 	private JTextField getImageCropSize() {
 		return imageCropSize;
 	}
+	
+	private JTextField getJitterCopies() {
+		return jitterCopies;
+	}
 
 	private JTextField setImageCropSize(JTextField imageCropSize) {
 		this.imageCropSize = imageCropSize;
 		return imageCropSize;
 	}
+	
+	private JTextField setJitterCopies(JTextField jitterCopies) {
+		this.jitterCopies = jitterCopies;
+		return jitterCopies;
+	}
+	
+	
 
 }

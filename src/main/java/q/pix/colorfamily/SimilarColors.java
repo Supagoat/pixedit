@@ -67,6 +67,13 @@ public class SimilarColors {
 		return new Color((int)Math.max(0,Math.round(rgb1[0])), (int)(int)Math.max(0,Math.round(rgb1[1])),(int)(int)Math.max(0,Math.round(rgb1[2])));
 	}
 	
+	public static Color toGrayscale(Color c) {
+		//double[] l = ColorSimilarity.RGBA2LAB(c.getRed(),c.getGreen(), c.getBlue(), 1.0);
+		//int lum = (int)l[0];
+		int lum = (int)(0.299*c.getRed()+0.587*c.getGreen()+0.114*c.getBlue());
+		return new Color(lum,lum,lum);
+	}
+	
 	/*
 	public Color getLumOffsetColor() {
 		double[] lab1 = ColorSimilarity.RGBA2LAB(getC1().getRed(),getC1().getGreen(), getC1().getBlue(), 1.0);

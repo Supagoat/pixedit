@@ -49,6 +49,8 @@ public class ImageUtil {
 	public static int IMAGE_HEIGHT = 256;
 	public static int CROPPABLE_IMAGE_WIDTH = 286;
 	public static int CROPPABLE_IMAGE_HEIGHT = 286;
+	public static int JITTER_COPIES = 0;
+	
 	public static final Color GREEN_BG = new Color(0, 255, 0);
 	public static final Color FAMILY_FEATURE_COLOR = new Color(220,220,0);
 	public static final String FILENAME_COORDS_SPLIT = "oOo";
@@ -164,14 +166,72 @@ public class ImageUtil {
 	public static int getBlue(int rgb) {
 		return rgb & 0x000000FF;
 	}
+	
+	/*
+	 * Takes a dir of images in the family representation colors and iterates over the family colors, outputting 1 of them as 
+	 * FAMILY_FEATURE_COLOR in each image.  Intended that the next step is to generate a testset with them.
+	 */
+	public static void isolateFamilyColors(File inputDir) throws IOException {
+		List<File> inputs = Arrays.asList(inputDir.listFiles());
+		String outDir = inputDir+"_familyisolate";
+		new File(outDir).mkdir();
+		List<Color> familyRepresentativeColors = initColorGroupColors();
+		for (File input : inputs) {
+			BufferedImage inputImage = ImageIO.read(input);
+			Set<Color> inImage = findColorsInImage(inputImage, familyRepresentativeColors);
+			int iter = 0;
+			for(Color c : familyRepresentativeColors) {
+				if(inImage.contains(c)) {
+					
+					outputIsolatedColors(inputImage, new File(outDir+File.separator+input.getName().replace(".png", "_"+iter+".png")), c.getRGB());
+					iter++;
+				}
+			}
+		}
+	}
+	
+	public static Set<Color> findColorsInImage(BufferedImage img, List<Color> searchColors) {
+		Set<Color> found = new HashSet<>();
+		for(int y=0;y<img.getHeight();y++) {
+			for(int x=0;x<img.getWidth();x++) {
+				Color c = new Color(img.getRGB(x, y));
+				if(searchColors.contains(c)) {
+					found.add(c);
+				}
+			}
+		}
+		return found;
+	}
+	
+	public static void outputIsolatedColors(BufferedImage img, File outFile, int toReplace) throws IOException {
+		BufferedImage outImg = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_RGB);
+		for(int y=0;y<img.getHeight();y++) {
+			for(int x=0;x<img.getWidth();x++) {
+				int rgb = img.getRGB(x, y);
+				if(rgb == toReplace) {
+					outImg.setRGB(x, y, FAMILY_FEATURE_COLOR.getRGB());
+				} else {
+					outImg.setRGB(x, y, rgb);
+				}
+			}
+		}
+		ImageIO.write(outImg, "png", outFile);
+	}
 
 	public static void combineImages(String leftImageDir, Optional<String> rightImageDir, boolean blanksWhereMissing,
-			String outputDir) throws IOException {
+			String outputDir, int iterationNum) throws IOException {
 		if (!rightImageDir.isPresent() && !blanksWhereMissing) {
 			throw new IllegalArgumentException(
 					"Either the dir containing the second set of images must exist or I must be allowed to generate blanks where they are missing");
 		}
 		SecureRandom rand = new SecureRandom();
+		
+		int xJitter = JITTER_COPIES > 0 ? Math.round(rand.nextFloat()*IMAGE_WIDTH*0.1f) : 0;
+		xJitter *= Math.random() >= 0.5 ? 1 : -1;
+		int yJitter = JITTER_COPIES > 0 ? Math.round(rand.nextFloat()*IMAGE_HEIGHT*0.1f) : 0;
+		yJitter *= Math.random() >= 0.5 ? 1 : -1;
+		
+		
 		List<File> inputs = Arrays.asList(new File(leftImageDir).listFiles());
 		new File(outputDir).mkdir();
 		for (File input : inputs) {
@@ -187,8 +247,12 @@ public class ImageUtil {
 			if (blanksWhereMissing) {
 				inputImage = ImageIO.read(input);
 			} else {
-				inputImage = copyIntoCenter(ImageIO.read(input),
+				if(iterationNum > 0) {
+					inputImage = copyImage(ImageIO.read(input),blankImageRandom(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT), xJitter, yJitter, false);
+				} else {
+					inputImage = copyIntoCenter(ImageIO.read(input),
 						blankImageRandom(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT));
+				}
 			}
 
 			BufferedImage targetImage = null;
@@ -200,14 +264,18 @@ public class ImageUtil {
 					targetImage = blankImageRandom(inputImage.getWidth(), inputImage.getHeight());
 				}
 			} else {
+				if(iterationNum > 0) {
+					targetImage = copyImage(ImageIO.read(target),blankImageRandom(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT), xJitter, yJitter, false);
+				} else {
 				targetImage = copyIntoCenter(ImageIO.read(target),
 						blankImageRandom(CROPPABLE_IMAGE_WIDTH, CROPPABLE_IMAGE_HEIGHT));
+				}
 			}
 
 			int width = blanksWhereMissing ? IMAGE_WIDTH : inputImage.getWidth();
 			int height = blanksWhereMissing ? IMAGE_HEIGHT : inputImage.getHeight();
 			
-			combineImage(inputImage, targetImage, outputDir, input.getName(), width, height);
+			combineImage(inputImage, targetImage, outputDir, input.getName().replace(".png", "_"+iterationNum+".png"), width, height);
 		}
 	}
 
@@ -228,6 +296,9 @@ public class ImageUtil {
 		SecureRandom rand = new SecureRandom();
 		int cols = leftImage.getWidth() > imageWidth ? leftImage.getWidth() / (imageWidth / 2) : 1;
 		int rows = leftImage.getHeight() > imageHeight ? leftImage.getHeight() / (imageHeight / 2) : 1;
+		
+		
+		//Combining actually happens here
 		
 		for (int c = 0; c < cols; c++) {
 			for (int r = 0; r < rows; r++) {
@@ -254,6 +325,12 @@ public class ImageUtil {
 		BufferedImage output = new BufferedImage(input.getWidth(), input.getHeight(), input.getType());
 		return copyImage(input, output, xOffset, yOffset, false);
 	}
+	
+
+	public static BufferedImage copyToBlankImage(BufferedImage input, int xOffset, int yOffset) {
+		BufferedImage output = blankImage();
+		return copyImage(input, output, xOffset, yOffset, false);
+	}
 
 	public static BufferedImage copyImage(BufferedImage input, BufferedImage output, int xOffset, int yOffset,
 			boolean cropBorder) {
@@ -262,10 +339,12 @@ public class ImageUtil {
 		int modifier = cropBorder ? 3 : 0;
 		for (int x = modifier; x < input.getWidth() - modifier; x++) {
 			for (int y = modifier; y < input.getHeight() - modifier; y++) {
-				if (x < input.getWidth() && y < input.getHeight()) {
-					output.setRGB(x + xOffset, y + yOffset, input.getRGB(x, y));
-				} else {
-					output.setRGB(x + xOffset, y + yOffset, GREEN_BG.getRGB());
+				int xM = x+xOffset;
+				int yM = y+yOffset;
+				if (xM < output.getWidth() && yM < output.getHeight() && x < input.getWidth() && y < input.getHeight() && xM >=0 && yM >=0 && x >=0 && y >= 0) {
+					output.setRGB(xM, yM, input.getRGB(x, y));
+				} else if(xM < output.getWidth() && yM < output.getHeight() && x < input.getWidth() && y < input.getHeight() && xM >=0 && yM >=0){
+					output.setRGB(xM, yM, GREEN_BG.getRGB());
 				}
 			}
 		}
@@ -324,12 +403,19 @@ public class ImageUtil {
 			throw new IllegalArgumentException("Directory must contain input and target subdirectories");
 		}
 		String outDir = dir + File.separator + FileUtil.TRAIN_DIR;
-		combineImages(dir + File.separator + FileUtil.INPUT_DIR,
-				Optional.ofNullable(dir + File.separator + FileUtil.TARGET_DIR), false, outDir);
+		String inDir = dir + File.separator + FileUtil.INPUT_DIR;
+		String targDir = dir + File.separator + FileUtil.TARGET_DIR;
+		System.out.println("Generating trainset from "+inDir+" and "+targDir+" to "+outDir);
+		for(int i=0;i<=JITTER_COPIES;i++) {
+			combineImages(inDir,
+					Optional.ofNullable(targDir), false, outDir, i);
+		}
 	}
 
 	public static void makeGenerationInputs(String dir) throws IOException {
-		combineImages(dir, Optional.of(dir), true, FileUtil.inputToTestsetOutputDir(dir));
+		for(int i=0;i<=JITTER_COPIES;i++) {
+			combineImages(dir, Optional.of(dir), true, FileUtil.inputToTestsetOutputDir(dir), i);
+		}
 	}
 
 	private static BufferedImage loadOptional(Optional<String> path) throws IOException {
@@ -1167,8 +1253,26 @@ public class ImageUtil {
 		ImageIO.write(analyzed, "png", new File(inputFile.getAbsolutePath().replace(".png", "_colors.png")));
 	}
 
-	public static SortedSet<Color> getDistinctColors(BufferedImage img) {
+/*	public static SortedSet<Color> getDistinctColors(BufferedImage img) {
 		SortedSet<Color> colorsFound = new TreeSet<>();
+		// Color inputBackground = new Color(img.getRGB(0, 0));
+		Color inputBackground = new Color(0, 255, 0);
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getHeight(); y++) {
+				Color c = new Color(img.getRGB(x, y));
+				if (c.getAlpha() == 0 || c.equals(inputBackground)) {
+					continue;
+				}
+				if (!colorsFound.contains(c)) {
+					colorsFound.add(c);
+				}
+			}
+		}
+		return colorsFound;
+	}*/
+	
+	public static Set<Color> getDistinctColors(BufferedImage img) {
+		HashSet<Color> colorsFound = new HashSet<>();
 		// Color inputBackground = new Color(img.getRGB(0, 0));
 		Color inputBackground = new Color(0, 255, 0);
 		for (int x = 0; x < img.getWidth(); x++) {
@@ -1278,7 +1382,7 @@ public class ImageUtil {
 	 * except the family feature output
 	 * @param inputsDir Input files that correspond to the outputs
 	 * @param shadedOutputsDir The outputs from p2p
-	 */
+	 * This is the tensorflow version.  Commented out in favor of the pytorch version
 	public static void cleanColorFamilyOutput(File inputsDir, File shadedOutputsDir) throws IOException {
 		File cleanOutputDir = new File(shadedOutputsDir.getAbsolutePath()+"_cleaned");
 		cleanOutputDir.mkdir();
@@ -1290,6 +1394,39 @@ public class ImageUtil {
 			System.out.println(f.getName());
 			BufferedImage input = ImageIO.read(f);
 			BufferedImage p2pOutput = ImageIO.read(outputFiles.get(f.getName().replace(".png", "-outputs.png")));
+			BufferedImage out = blankImageTransparent(input.getWidth(), input.getHeight());
+			for(int y=0;y<input.getHeight();y++) {
+				for(int x=0;x<input.getWidth();x++) {
+					if(input.getRGB(x, y) == FAMILY_FEATURE_COLOR.getRGB()) {
+						out.setRGB(x, y, p2pOutput.getRGB(x, y));
+					}
+				}
+			}
+
+			ImageIO.write(out, "png",
+					new File(cleanOutputDir + File.separator + f.getName()));
+		}
+	}
+	*/
+	/**
+	 * Takes the directories of inputs and outputs and uses the inputs to mask away everything
+	 * except the family feature output
+	 * @param inputsDir Input files that correspond to the outputs
+	 * @param shadedOutputsDir The outputs from p2p
+	 */
+	public static void cleanColorFamilyOutput(File imgDir) throws IOException {
+		File cleanOutputDir = new File(imgDir.getAbsolutePath()+"_cleaned");
+		cleanOutputDir.mkdir();
+		
+		//Map<String,File> outputFiles = new HashMap<>();
+		FilenameFilter fakesFilter = (File dir, String name) -> name.endsWith("_fake_B.png");
+		//Arrays.stream(imgDir.listFiles(fakesFilter)).forEach(f -> outputFiles.put(f.getName(), f));
+		for(File f : imgDir.listFiles(fakesFilter)) {
+			System.out.println(f.getName());
+			BufferedImage p2pOutput = ImageIO.read(f);
+			String inputPath = f.getAbsolutePath().replace("_fake_B.png", "_real_A.png");//outputFiles.get();
+			
+			BufferedImage input = ImageIO.read(new File(inputPath));
 			BufferedImage out = blankImageTransparent(input.getWidth(), input.getHeight());
 			for(int y=0;y<input.getHeight();y++) {
 				for(int x=0;x<input.getWidth();x++) {
@@ -1661,7 +1798,7 @@ public class ImageUtil {
 					out.setRGB(x, y, inputC.getRGB());
 				} else if(rank == featuredColorIdx) {
 					try {
-						out.setRGB(x, y, family.offsetLuminance(FAMILY_FEATURE_COLOR, inputC).getRGB());
+						out.setRGB(x, y, inputC.getRGB());//SimilarColors.toGrayscale(new Color(inputC.getRGB())).getRGB());//family.offsetLuminance(FAMILY_FEATURE_COLOR, inputC).getRGB());
 						paintedFeatured = true;
 					} catch (Exception e) {
 						System.err.println("Need color family set for " + fileName + " " + x + "," + y);
