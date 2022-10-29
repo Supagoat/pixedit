@@ -1473,8 +1473,9 @@ public class ImageUtil {
 					composed = blankImageTransparent(input.getWidth(), input.getHeight());
 				}
 				
-				
-				composeOntoImage(applyPalette(input, palettes.get(getPaletteId(in.getName()))), composed);
+				Set<Color> palette = palettes.get(getPaletteId(in.getName()));
+				System.out.println("Image "+in.getName()+" Applying palette "+getPaletteId(in.getName())+" with "+palette.size()+" colors");
+				composeOntoImage(applyPalette(input, palette), composed);
 			}
 			
 			ImageIO.write(composed, "png", new File(outDir + File.separator + familyFiles.getKey()+".png"));
@@ -1495,8 +1496,9 @@ public class ImageUtil {
 	// Only 10 palettes are supported but something is wrong if an image is composed of more than 10 different palettes
 	public static Map<String, Set<Color>> loadPalettes(File dir) throws IOException {
 		Map<String, Set<Color>> paletteColors = new HashMap<>();
-		Set<Color> colors = new HashSet<>();
+		
 		for (File f : dir.listFiles()) {
+			Set<Color> colors = new HashSet<>();
 			BufferedImage img = ImageIO.read(f);
 			for (int y = 0; y < img.getHeight(); y++) {
 				for (int x = 0; x < img.getWidth(); x++) {
@@ -1507,6 +1509,7 @@ public class ImageUtil {
 				}
 			}
 			String paletteNum = getPaletteId(f.getName());
+			System.out.println("Putting palette "+f.getName()+" as "+paletteNum+" with "+colors.size());
 			paletteColors.put(paletteNum, colors);
 		}
 		return paletteColors;
@@ -1524,6 +1527,7 @@ public class ImageUtil {
 	}
 
 	public static BufferedImage applyPalette(BufferedImage img, Set<Color> paletteColors) {
+		System.out.println("Palette with "+paletteColors.size()+" colors");
 		BufferedImage out = blankImageTransparent(img.getWidth(), img.getHeight());
 		for (int y = 0; y < img.getHeight(); y++) {
 			for (int x = 0; x < img.getWidth(); x++) {
