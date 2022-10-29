@@ -62,6 +62,7 @@ public class StartupScreen extends JFrame {
 
 		//getPanel().add(generateFamilyTrainSets()); // not using this.  Featured family is better.
 		//getPanel().add(paintToFamilyIterationButton()); // I think this just confuses the algorithm
+		getPanel().add(applyPaletteButton());
 		getPanel().add(reduceColorButton());
 		getPanel().add(sliceImageButton());
 		getPanel().add(combineImagesButton());
@@ -394,6 +395,36 @@ public class StartupScreen extends JFrame {
 		return cleanFamilyOutput;
 	}
 
+	/**
+	 * Takes a directory of input images and a directory of palettes and applies the palettes to the images and composes
+	 * the individual palette (family color group) images together in accordance with their naming sequence
+	 * @return
+	 */
+	public JButton applyPaletteButton() {
+		JButton applyPaletteButton = new JButton("Compose And Palette");
+		applyPaletteButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					int returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File imgDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					inputChooser = new JFileChooser();
+					inputChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+					returnVal = inputChooser.showOpenDialog(StartupScreen.this);
+					File paletteDir = new File(inputChooser.getSelectedFile().getAbsolutePath());
+					ImageUtil.applyPalette(imgDir, paletteDir);
+					
+				} catch (Exception ex) {
+					handleError(ex);
+					applyPaletteButton.setText("ERROR: " + ex.toString());
+				}
+			}
+		});
+		return applyPaletteButton;
+	}
+	
 	public JButton reduceColorButton() {
 		JButton reduceColorButton = new JButton("Reduce Colors On Waifus");
 		reduceColorButton.addActionListener(new ActionListener() {

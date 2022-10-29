@@ -22,6 +22,13 @@ public class SimilarColors {
 		return similarity;
 	}
 	
+	public double getLumenSensitiveDiff() {
+		double[] lab1 = ColorSimilarity.RGBA2LAB(getC1().getRed(),getC1().getGreen(), getC1().getBlue(), 1.0);
+		double[] lab2 = ColorSimilarity.RGBA2LAB(getC2().getRed(),getC2().getGreen(), getC2().getBlue(), 1.0);
+		double similarity = ColorSimilarity.DeltaE00(lab1[0], lab1[1], lab1[2], lab2[0], lab2[1], lab2[2]);
+		return similarity;
+	}
+	
 	public Color getLumOffsetColor() {
 		double[] lab1 = ColorSimilarity.RGBA2LAB(getC1().getRed(),getC1().getGreen(), getC1().getBlue(), 1.0);
 		double[] lab2 = ColorSimilarity.RGBA2LAB(getC2().getRed(),getC2().getGreen(), getC2().getBlue(), 1.0);
