@@ -256,8 +256,12 @@ public class StartupScreen extends JFrame {
 		return paintToFamilyButton;
 	}
 
+	/**
+	 * Generates inputs and targets for featured family inputs.  Select the green backgrounded originals dir.
+	 * @return
+	 */
 	private JButton paintFeaturedFamily() {
-		JButton paintToFamilyButton = new JButton("Paint Family Featured");
+		JButton paintToFamilyButton = new JButton("(USE THIS) Paint Family Featured");
 		paintToFamilyButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {

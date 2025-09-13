@@ -1473,8 +1473,9 @@ public class ImageUtil {
 					composed = blankImageTransparent(input.getWidth(), input.getHeight());
 				}
 				
-				Set<Color> palette = palettes.get(getPaletteId(in.getName()));
-				System.out.println("Image "+in.getName()+" Applying palette "+getPaletteId(in.getName())+" with "+palette.size()+" colors");
+				Set<Color> palette = palettes.get(getColorFamilyNumberFromFileName(in.getName()));
+				System.out.println("Image "+in.getName()+" Applying palette ");
+				System.out.println("Found palette "+getColorFamilyNumberFromFileName(in.getName())+" with "+palette.size()+" colors");
 				composeOntoImage(applyPalette(input, palette), composed);
 			}
 			

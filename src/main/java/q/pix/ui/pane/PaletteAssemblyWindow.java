@@ -412,7 +412,7 @@ public class PaletteAssemblyWindow extends JFrame implements WorkspacePaintWindo
 	 * 
 	 * @param featuredFamilyPart One of the image files to base the palette file
 	 *                           name off of
-	 * @return absolute path to where the pilot should be saved
+	 * @return absolute path to where the palette should be saved
 	 */
 	private String setupPalette(File featuredFamilyPart) {
 		String paletteFilePath = loadPalette(featuredFamilyPart);
